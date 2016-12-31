@@ -1,0 +1,75 @@
+%%% lorem.tex --- 
+%% 
+%% Filename: lorem.tex
+%% Description: 
+%% Author: Ola Leifler
+%% Maintainer: 
+%% Created: Wed Nov 10 09:59:23 2010 (CET)
+%% Version: $Id$
+%% Version: 
+%% Last-Updated: Wed Nov 10 09:59:47 2010 (CET)
+%%           By: Ola Leifler
+%%     Update #: 2
+%% URL: 
+%% Keywords: 
+%% Compatibility: 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Commentary: 
+%% 
+%% 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Change log:
+%% 
+%% 
+%% RCS $Log$
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Code:
+
+\chapter{Discussion}
+\label{cha:discussion}
+%
+
+%One potential problem in this thesis is that the data is of different scale even though we initialize word embeddings and postag embeddings from a same uniform distribution. Because word embeddings and postag embeddings are updated in each iteration. They move away from their original position. The problem with unscaled data inputs is that the neural network gets slow to reach a local optimum. This can be revealed by experiment 5. In experiment 5, the cubic function performs better than tanh and tanhcubic. Tanh and tanhcubic both bound output values of hidden neurons between -1 and 1. If some variables have large values, it will always push output values of hidden neurons close to -1 or 1, which is less informative to the next layer. The cubic function on the other hand doesn't have a bound on the output of hidden neurons. It could be dangerous if the input of a hidden neuron is very large then the output of hidden neuron will be blow up. However the experiment shows this isn't a problem for our neural network and our neural network benefited from the nature of cubic function. 
+
+%The normalized glove embeddings significantly improves the model accuracy by 1\%,  
+
+%In this thesis, we used l2 norm and dropout to regularize the parameters. They are embedded variable selection methods. The variable in our thesis is multivariate. Each variable contains 50 dimensions.  We will use the genetic algorithm to perform variable selection on our neural network model. Our model has 21 element feature, keep all of them will add redundancy and variance to the model. It is hard to define our variables. Each variable in our data is a word or postag embeddings, each of them has 50 dimensions. Cut any one of the dimensions implies to cut the whole variable together. We can encode the presence of a variable by 1 or 0. 
+
+%
+
+
+
+\section{Discussion of Data}
+Experimental results show that the English syntactic structure is highly predictable. Patterns are evident in the training data but capturing patterns is a complex problem. One limitation of our dependency parser is that the training data is a small sample of English sentences. The training data was collected from Wall Street Journal. It covered a small portion of topics related with news. The performance of the parser needs to be examined if the test data is collected from another domain that has many unknown words to the parser. Resources of annotated data are countable while resources of unannotated data are limitless. On the one hand, it is promising to reduce the cost of annotating data with the assist of computers. On the other hand, as unlabeled data is much cheaper in natural language processing, it is worth to try semi-supervised learning \cite{kiperwassersemi}. A semi-supervised model uses both labeled and unlabeled data for training. Building a semi-supervised model using neural networks for dependency parsing can be a future research topic.
+
+This thesis mainly focused on English dependency treebank. The dependency parsing system is applicable to any other languages under the condition that the training data is of the same format. In the next step we will evaluate the performance of our neural network on a Swedish dependency treebank with randomly initialized word embeddings and postag embeddings.    
+
+The raw input to a dependency parsing system is a sentence. Part-of-speech tags are assumed to be known for each word in this thesis. In real application, we need to first predict part-of-speech tags of words using a part-of-speech tagger. The accuracy of our dependency parser will be to some extent lowered down depending on the accuracy of a part-of-speech tagger. In the future work, we will use the Standford POS tagger \cite{toutanova2003feature}, which is expected to achieve an accuracy about 97\%.
+
+The inputs of the neural network model, mainly consists of word embeddings and postag embeddings, is by itself a group of parameters that are updated in each iteration. Although we experimented initializing word embeddings and postag embeddings from a same distribution, we can not guarantee that the input data is of the same scale since it is not fixed. This could possibly prevent the neural network from finding a better local optimum before the learning rate is tuned down by AdaGrad. The batch normalization proposed by Ioffe et al. \cite{ioffe2015batch} provides a solution for this problem. It normalizes the input data in each mini-batch, speeding up the learning process and making the model easier to get out of a local optimum.
+
+Data preprocessing is crucial to the success of a project. One important step of data preprocessing in this thesis is that replacing some words in the training data as ``<UNKNOWN>'' so that if any words unseen in the training set occurred in the test data, it can be substituted with the embedding of ``<UNKNOWN>''. We simply assigned words occurred only once in the training data as unknown words. However, there is a large number of words occurred only once in the training set. This loses part of information because even though a word only occurred once in the training data it might occur again in the test data. In some sense this word is not a real unknown word. In the future work, we will randomly assign the unknown label to words in the training set inversely proportional to their frequency \cite{kiperwasser2016simple}. It will enable us to control the number of unknown words by adjusting probabilities.
+
+\section{Discussion of Model}
+The features selected in the neural network model are assumed to be core features. We did not perform feature selection in our model. Although L2 regularization is applied in the neural network model, it penalizes features on a parameter level. Features in the setting of our neural network model are mostly word embeddings and postag embeddings. This means each feature consists of 50 dimensions. Treating each embedding as a unit, there are totally 21 features in our model. Feature importance in neural network is normally evaluated by cross validation errors. In order to perform variable selection, we first need to improve the running speed of our dependency parser in the future.
+
+In this thesis, we introduced the feedforward neural network as a generative model. The training objective of this model is to minimize the upper bound of posterior expected loss. This violates a common practice of Bayesian statistics. A Bayesian approach first makes inference about the posterior of parameters given data. Based on posteriors distribution, by Bayesian theory, one chooses an action which minimizes the posterior expected loss. However exact inference is intractable for our problem. We alternatively chose the max-margin training objective which is equivalent to the minimization of the upper bound of posterior expected loss on a training set.
+
+
+ Moreover, the generative neural network model can also be applied to a common classification problem. The difference is that a graph search algorithm is no longer needed. The highest score of $(x,y)$ is simply the highest value in the output layer. One possible advantage of this generative neural network is that it deals better with unbalanced data. Because in each iteration only parameters associated with real label and predicted label are updated while in a discriminative model, all parameters are updated leading frequent labels have a bigger influence on rare labels.  In this thesis, words and postags are represented by embeddings. Similarly, we can also represent categorical variables by randomly initialized embeddings rather than 0-1 representations in a common classification problem. This allows the neural network to learn the inner relationship among different categories of a categorical variable. In the future, we will further research on the performance of generative neural network models for classification problems.
+
+The big challenge of this thesis was to implement the model. A large amount of time is spent on developing a suitable neural network model for dependency parsing. Although an highly advanced neural network java library DL4j is available for use, they have not made it support back propagating errors to word embeddings. Besides, they do not provide the needed cost function as well as activation functions in the thesis. Their code is highly optimized making it hard to customize it according to our needs. Transferring to other languages such as python requires extra effort to rewrite part of classes in the old system. Therefore it is decided to implement the neural network dependency parser by the author. The benefits of implementing this system are that we have a better understanding of all methods being used and it is more flexible for us to try new ideas on this system. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% lorem.tex ends here
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "demothesis"
+%%% End: 

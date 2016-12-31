@@ -1,0 +1,288 @@
+%%% lorem.tex --- 
+%% 
+%% Filename: lorem.tex
+%% Description: 
+%% Author: Ola Leifler
+%% Maintainer: 
+%% Created: Wed Nov 10 09:59:23 2010 (CET)
+%% Version: $Id$
+%% Version: 
+%% Last-Updated: Wed Nov 10 09:59:47 2010 (CET)
+%%           By: Ola Leifler
+%%     Update #: 2
+%% URL: 
+%% Keywords: 
+%% Compatibility: 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Commentary: 
+%% 
+%% 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Change log:
+%% 
+%% 
+%% RCS $Log$
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Code:
+
+\chapter{Framework}
+\label{cha:Basic Concepts}
+In Chapter 1, we mentioned that given a trained score function, dependency parsing is a combinatorial optimization task. A dependency parsing system searches the dependency tree with the highest score as a prediction for a sentence. As shown in Equation \ref{eq:ctr1},
+\begin{equation}
+\label{eq:ctr1}
+\hat{y}=\underset{y\in Y(x)}{\operatorname{argmax}}\,Score(x,y;\theta)
+\end{equation}   
+where $Y(x)$ is the search space given $x$ and $\theta$ represents model parameters.
+
+In this chapter, we present a general framework for (graph-based) dependency parsing. Equation \ref{eq:ctr1} indicates that a dependency parser consists of three main components, a defined search space $Y(x)$, a graph search algorithm and an actual form of the score function.  Section \ref{sec:Dependency Tree} defines the search space used in this thesis. Section \ref{sec:Eisner Algorithm}- describes the Eisner algorithm. The Eisner algorithm is the graph search algorithm which searches the highest-scoring tree within the search space defined in Section \ref{sec:Dependency Tree}. It assumes that the score of a dependency tree is decomposed into scores of individual arcs.  
+In this thesis, the form of the score function is a feedforward neural network. Section \ref{sec:Feedforward Neural Network} gives some background knowledge about feedforward neural networks. Methods about how to train the score function will be introduced in Chapter \ref{cha:method}. With a defined search space, a graph search algorithm, and a trained score function, the work flow of a dependency parser in prediction is drafted in Figure \ref{fig:workfl}. For readers who need a fast reading, the following sections in Chapter \ref{cha:Basic Concepts} can be skipped.
+
+\begin{figure}
+  \centering
+    \includegraphics[width=0.6\textwidth]{workfl}
+  \caption{Work Flow of a Dependency Parser in Prediction}
+  \label{fig:workfl}
+\end{figure}
+
+\section{Dependency Tree}
+\label{sec:Dependency Tree}
+The search space of our dependency parser is the set of all possible projective dependency trees.
+We summarized relevant knowledge about dependency trees from K{\"u}bler et al. \cite{kubler2009dependency}.
+\subsection{Sentence}
+A sentence is an ordered set of tokens, denoted by 
+$S={x_0,x_1,...,x_n}$
+\subsection{Dependency Relation}
+A dependency relation is a triple of $(x_i,x_j,r)$. The triple represents a labeled directed arc pointing from head $x_j$ to dependent $x_i$ with relation type $r$, 
+\begin{center}
+$x_j\xrightarrow[]{r} x_i$
+\end{center}
+where $r\in R$, $R$ is the set of all dependency types and $(x_i,x_j,r)\in A$, $A$ is the set of all dependency relations in a sentence. To give an example, in Figure \ref{fig:dptree} (``many'',``investors'',``NMOD'') forms a dependency relation. It points from ``investors'' to ``many'' with dependency type ``NMOD''.
+\subsection{Dependency Tree}
+A dependency tree is a labeled directed acyclic graph $G=(S,A)$ originating from the root $x_0$. 
+It satisfies the following four properties:
+
+\begin{enumerate}
+\item  Root Property\\
+There does not exist a head for the root node of a dependency tree. The root node of a sentence is the word which does not modify any other words and is only modified by other words. For computational convenience, it is practical to insert an artificial node $x_0=<ROOT>$ which points to the real root word of the sentence with relation type ``ROOT''. 
+\item Connectedness Property\\
+There does not exist an isolated node. That is, regardless the direction of arcs, there is an undirected path between every pair of node in the graph. 
+\item Single-head Property\\
+All nodes have and only have one head except $x_0$. Since $x_0$ is an artificial node, it implies all words of a sentence have and only have one head.
+\item Acyclicity property\\
+There does not exist any circles. A circle would imply that a word is dependent on itself which is meaningless.
+\end{enumerate}
+
+\subsection{Projectivity and Non-projectivity}
+Dependency trees fall into two categories, projective trees and non-projective trees. 
+Projective trees satisfy the property that for all arcs in the tree there is a path from the
+head of the arc to all nodes in between the head and the dependent. Intuitively it means that
+the projective tree does not contain any crossing arcs and vice versa for non-projective trees.
+The phenomenon of non-projectivity seldom occurs in English while in Czech, Dutch and
+German it occurs more frequently \cite{mcdonald2005online}. Figure \ref{fig:proj} gives examples of a projective tree and a non-projective tree. As this thesis mainly focus on English sentences, we assume the search space for a sentence is the set of all possible projective dependency trees.
+
+\begin{figure}
+  \centering
+    \includegraphics[width=0.6\textwidth]{proj}
+  \caption{Demonstrations of Projective Trees and Non-projective Trees}
+  \label{fig:proj}
+\end{figure}
+
+\section{Eisner Algorithm}
+\label{sec:Eisner Algorithm}
+We choose the Eisner algorithm as the graph search algorithm for our dependency parser. The Eisner algorithm searches a highest-scoring tree given a sentence within the search space defined in \ref{sec:Dependency Tree}. The score of a dependency tree given by $Score(x,y,\theta)$ on a graph level is decomposed into scores of subgraphs. Subgraphs are categorized into different orders according to the maximum number of nodes sharing the same head, as shown in Figure \ref{fig:subgraph}. 
+\begin{figure}
+  \centering
+    \includegraphics[width=0.7\textwidth]{subgraph}
+  \caption{Subgraph Orders}
+  \label{fig:subgraph}
+\end{figure}
+
+The Eisner algorithm proposed by \cite{eisner1996three} is a graph search algorithm which searches for a highest-scoring projective tree of which the score is factorized into scores of first order sub-graphs.  In other words, the score of a tree is the sum of scores of individual arcs. 
+
+\begin{equation}
+Score(x,y,\theta)=\sum_i score(x_i,y_{i1},y_{i2},\theta)
+\end{equation}
+Given the scores of all possible arcs in the graph, the Eisner algorithm guarantees to find the highest-scoring tree within the search space defined in Section \ref{sec:Dependency Tree} with $O(n^3)$ time where n is the length of the sentence.
+\begin{figure}
+  \centering
+    \includegraphics[width=0.8\textwidth]{eisner}
+  \caption{Graph Representation of Eisner Algorithm}
+  \label{fig:eisner}
+\end{figure}
+Eisner Algorithm constructs a dynamic programming table C[s][t][d][c] of size $n\times n\times 2\times 2$ to keep track of  the highest score of a subgraph which spans
+$x_s x_{s+1}...x_t$ where $s<t$, $d$ indexes the direction of the span (0=left,1=right) and c indexes the state of the span (0=complete,1=incomplete). The indices
+indicate four types of spans in the Eisner algorithm, right complete span, left complete span, right incomplete span, and left incomplete span. A right complete span
+take $x_s$ as the head node of the span, $x_t$ as the end point of the span and vice versa for a left complete span. A right incomplete span take $x_s$ as the head
+node of the span, $x_t$ as the target node of $x_s$ and vice versa for a left incomplete span. In a complete span the end point is not necessary to be the target
+node of the head of the span. The Eisner algorithm starts with taking each single node as a left complete span or a right complete 
+span with score 0, iteratively merging two spans until a right complete span from $x_0$ to $x_n$ is reached. 
+
+
+ Rules of joining spans are demonstrated in Figure \ref{fig:eisner}. A complete span is graphically represented by  $\rightarrow|$ or  $|\leftarrow$. A incomplete span is graphically represented by $\rightarrow$ or $\leftarrow$. A left incomplete span and a right incomplete span can be joined to form a complete left or right span. A left complete span and a left incomplete span can be joined to form a left complete span. A right complete span and a right incomplete span can be joined to form a right incomplete
+span.
+
+The highest score of a projective tree is stored in C[0][n][1][0]. As mentioned C[s][t][d][c] is a dynamic programming table, once C[0][n][1][0] is obtained one can trace back its trajectory to get the desired tree. Algorithm 1 \cite{kubler2009dependency} gives the standard Eisner algorithm. 
+\begin{algorithm}
+\caption{Eisner Algorithm}
+\label{Algo1}
+\begin{algorithmic}
+\STATE 0: \textbf{input} a sentence $x_0 x_1...x_n$, score(target $x_i$, head $x_j$, dependency type $r$, weight $\theta$) 
+\STATE 1: Instantiate C[n][n][2][2]
+\STATE 2: for all s,d,c set C[s][s][d][c] = 0.0 
+\STATE 3: for m in 1:n
+\STATE 4:  \hspace{4mm}for s in 1:n
+\STATE 5:  \hspace{6mm}t=s+m
+\STATE 6:  \hspace{6mm}if t > n break
+\STATE 7:  \hspace{6mm}$C[s][t][0][1]=max_{s\leq q<t}(C[s][q][1][0]+C[q+1][t][0][0])+max_r score(x_s,x_t,r,\theta)$
+\STATE \hspace{8mm}\%subgraph a in Figure \ref{fig:eisner}
+\STATE 8:  \hspace{6mm}$C[s][t][1][1]=max_{s\leq q<t}(C[s][q][1][0]+C[q+1][t][0][0])+max_r score(x_t,x_s,r,\theta)$
+\STATE \hspace{8mm}\%subgraph b in Figure \ref{fig:eisner}
+\STATE 9:  \hspace{6mm}$C[s][t][0][0]=max_{s\leq q<t}(C[s][q][0][0]+C[s][q][0][1])$
+\STATE \hspace{8mm}\%subgraph c in Figure \ref{fig:eisner}
+\STATE 10: \hspace{4.25mm}$C[s][t][1][0]=max_{s\leq q<t}(C[s][q][1][1]+C[s][q][1][0])$
+\STATE \hspace{8mm}\%subgraph d in Figure \ref{fig:eisner}
+\end{algorithmic}
+\end{algorithm}
+
+
+\section{Feedforward Neural Network}
+\label{sec:Feedforward Neural Network}
+The feedforward neural network works as the score function in our dependency parser. This section only provides background knowledge of neural networks as well as optimization and regularization methods applied in our neural network model. In Section \ref{sec:Generative Neural Network}, we will introduce the neural network in the context of our dependency parsing problem.
+
+The logic of the human brain has been studied for years. Biological neurons in the brain are connected by dendrites and axons. A neuron accumulates signals received from dendrites and releases a impulse to the next neuron through an axon if the accumulated signal is upon a threshold. Inspired by biological neurons, researchers created feedforward neural network models to mimic the function of dendrites and axons. Neurons in a feedforward neural network model are hierarchically arranged by layers, namely input layer, hidden layer and output layer. Neurons in the input layer directly outputs system inputs to neurons in a hidden layer. The number of hidden layers may vary. Neurons in a hidden layer sums up inputs from neurons in the preceding layer and output the transformed summation to neurons in the succeeding layer. Finally, the output layer receives signals from the last hidden layer and produces the system output. Figure \ref{fig:simnn} gives a simple example of neural network models. Except the output layer, there is a bias neuron in each layer which does not connect neurons in the preceding layer. The bias neuron always outputs a value of $1$. The use of the bias neuron is to push the plane away from origin.  
+\begin{figure}
+  \centering
+    \includegraphics[width=0.7\textwidth]{simnn}
+  \caption{A Simple Example of Neural Networks}
+  \label{fig:simnn}
+\end{figure}
+
+In fact, the neural network is a generalized linear model with self-adaptive basis functions. It projects the raw data input into another representative feature space and builds a linear model upon transformed features. The feedforward neural network takes the form:
+\begin{align*}
+y(x,\theta)&=f(\theta_{n-1}^T\phi_{n-1}(x)+b_{n-1})\\
+\phi_{n-1}(x)&=g(\theta_{n-2}^T\phi_{n-2}(x)+b_{n-2})\\
+\dots\numberthis\\
+\phi_{1}(x)&=g(\theta_{0}^T\phi_{0}(x)+b_0)\\
+\phi_{0}(x) &= x
+\end{align*}
+where $f(\cdot)$ is a nonlinear transformation in the case of classification and is an identical transformation in the case of regression \cite{bishop2006pattern}. The basis functions $\phi_{i}(\cdot)$ in layer $i$ is itself a function of linear combination of basis functions in layer $i$-1 where $g(\cdot)$ is called the activation function. The parameter $\theta_i$ is the weight matrix from layer $i$ to layer $i$+1 of size $n_{i}\times n_{i+1}$ where $n_i$ is the number of neurons in the i\ts{th} layer. The superscript $T$ is the transpose operation of a matrix.
+
+\subsection{Back Propagation Algorithm}
+The standard method of training neural networks is the backpropagation algorithm \cite{werbos1974}. It is a gradient descent method combined with chain rules. A neural network first receives an input signal and feed the signal back to the output layer. The output layer returns back an error term based on a loss incurred between the resulting signal and the desired output. The neural network system back propagates this error term to front layers iteratively. Algorithm \ref{Algo3} illustrates the back propagation algorithm. Let $(p_m, q_m)$ denote the $m$\ts{th}  training example, $p_m$ is the initial input, $q_m$ is the desired output, $n$ denote the number of layers including the input layer, $l(\cdot)$ denote a given loss function and $g_i(\cdot)$ denote the activation function in the i\ts{th} layer. In the feedforward phase, after neurons being activated, the bias weight is added to the output vector in that layer. In the backpropagate phase, the error term does not include the bias neuron since it is not connected with its preceding layer. The weight of the bias neuron is excluded when calculating the error term. 
+\begin{algorithm}
+\caption{Backpropagation Algorithm}
+\label{Algo3}
+\begin{algorithmic}
+\STATE 0: \textbf{input} a training instance$(p_m,q_m)$
+\STATE \textbf{phase1:feedforward}
+\STATE 1: $z_0=p_m$
+\STATE 2: $a_0=g_0(z_0)$
+\STATE 3: $for(i=1;i<n;i++)\{$
+\STATE 4: \hspace{2mm}$a_{i-1}=concatenate(1,a_{i-1})$
+\STATE 5: \hspace{2mm}$z_i=\theta_{i-1}^T\times a_{i-1}$
+\STATE 6: \hspace{2mm}$a_i=g_i(z_i)$
+\STATE 7: $\}$
+\STATE  \textbf{phase2:backpropagate}
+\STATE 8: \hspace{1.2mm}$cost=l(q_m,a_{n-1})$
+\STATE 9: \hspace{1.2mm}$\delta_{n-1}=\frac{\partial l}{\partial z_{n-1}}=\frac{\partial l}{\partial a_{n-1}}\frac{\partial a_{n-1}}{\partial z_{n-1}}=l^{'}(q_m,a_n-1)\cdot g_{n-1}^{'}(z_{n-1})$
+\STATE 10: $for(i=n-2;i>=0;i--)\{$
+\STATE 11: \hspace{2mm}$\Delta \theta_i=\frac{\partial l}{\partial z_{i+1}}\frac{\partial z_{i+1}}{\partial \theta_i}= a_i\times \delta_{i+1}^T$
+\STATE 12: \hspace{2mm}$\delta_i = \frac{\partial l}{\partial z_i}=\frac{\partial l}{\partial z_{i+1}}\frac{\partial z_{i+1}}{\partial a_i}\frac{\partial a_i}{\partial z_i}=\theta_i[1:end,0:end]\times \delta_{i+1}\cdot g_i^{'}(z_i)$
+\STATE \% ``end'' refers to the index of the last row or column in the matrix.
+\STATE 13: $\}$
+\STATE \textbf{phase3:update}
+\STATE 14: $\Delta\theta_i=\theta_i-\eta\Delta\theta_i$
+
+\end{algorithmic}
+\end{algorithm}
+
+
+
+Neural networks are universal approximators \cite{hornik1989}. With the increase of hidden units, the risk of overfitting increases. Regularization methods are used to alleviate the problem of overfitting in statistical models. This thesis adopted two regularization methods, L2 regularization and Dropout. We will describe these two methods in the next two sections.
+\subsection{$L2$ Regularization}
+\label{subsec:L2 norm}
+$L2$ regularization is a convenient method to regularize the parameters of a model. It adds a penalty term $0.5\lambda \theta^T\theta$ to the objective function. In a single step, it shrinks the weight matrix proportionally before moving against gradients. Overall it decays parameters of unimportant variables more than predicative variables. From the perspective of Bayesian statistics, given a MAP estimation problem, by applying $L2$ regularization it assumes a Gaussian prior for $\theta$. For example, in linear regression, $L2$ regularization is known as ridge regression. The likelihood of a linear regression model is 
+\begin{equation}
+p(D|\theta)=\prod_{i=1}^{N} N(y_i|\theta_0+\theta^Tx_i,\sigma^2)
+\end{equation}
+Assuming the prior of $\theta$ is a Gaussian distribution with zero mean,
+\begin{equation}
+p(\theta)=\prod_j N(\theta_j|0,\frac{\sigma^2}{\lambda})
+\end{equation}
+The MAP estimates of the linear regression is 
+\begin{equation}
+\label{eq:map}
+argmax_\theta p(D|\theta)p(\theta)
+\end{equation}
+By taking logarithm and reversing the sign, Equation \ref{eq:map} is equivalent to minimizing 
+\begin{equation}
+c(\theta)=\frac{1}{N}\sum_{i=1}^N(y_i-(\theta_0+\theta^T x_i))^2+\lambda||\theta||^2
+\end{equation}
+%In Section \ref{sec: Structural Support Vector Machine}, we introduced the training objective of our neural network model. Similarly parameters are assumed to be a Gaussian prior. The hyper parameter $\lambda$ controls the prior belief about how likely a parameter is centered around zero. It is reasonable to assign different $\lambda$ according to our prior belief towards different parameters. However, since we do not have any prior knowledge about parameters in the neural network model the hyper parameter $\lambda$ is equally assigned to priors of all parameters.  
+
+\subsection{Dropout}
+\label{subsec:Dropout}
+Dropout proposed by Hinton \cite{dropout} is effective to reduce generalization errors for neural network models. The dropout method thins a fully connected neural network by temporarily dropping  randomly chosen input and hidden neurons. In each iteration, a non-output layer neuron is present with probability p. The neuron being absent temporarily loses connections with its preceding and succeeding neurons while parameters associated with that neuron are retained to a next training iteration.  The process of feedforward and backpropagation will not involve those absent neurons. Dropout actually samples a neural network model from a population of $2^n$ possible models where $n$ is the number of non-output layer neurons. In test time, the proper way is to average predictions of all sampled neural networks. However, it is computationally expensive. The dropout method approximates the average of predictions by using a single fully connected neural network in test time. The output value of each neuron is multiplied by $p$ so that the expected output value of a neuron is the same as that in the training process. 
+
+The dropout process added into the back propagation algorithm \ref{Algo3} is described by Equation \ref{eq:dr1} \ref{eq:dr2} \ref{eq:dr3}. 
+
+In the feedforward phase, 
+\begin{align*}
+\label{eq:dr1}
+&z_i = \theta_{i-1}\times a_{i-1}\\
+&a_i = g_i(z_i)\\
+&r_i\sim Bernoulli(p)\numberthis\\
+&a_i = a_i\cdot r_i\\
+&a_i = concatenate(1,a_i)
+\end{align*}
+
+In the backpropate phase,
+\begin{align*}
+\label{eq:dr2}
+&\delta_i =\theta_i[1:end,0:end]\times \delta_{i+1}\cdot g_i^{'}(z_i)\numberthis\\
+&\delta_i = \delta_i\cdot r_i\\
+\end{align*}
+
+In the prediction phase,
+\begin{align*}
+\label{eq:dr3}
+&z_i = \theta_{i-1}^T\times a_{i-1}\numberthis\\
+&a_i = g(z_i)\cdot p\\
+\end{align*}
+
+\subsection{AdaGrad}
+\label{subsec:AdaGrad}
+AdaGrad is a variant of gradient descent method. This thesis used AdaGrad as the rule for updating parameters. An universal learning rate for updating parameters is not an optimal strategy. During training some parameters overshoot frequently while some parameters already become stable. Neither decreasing nor increasing learning rate will satisfy all parameters at the same time. Duchi and et.al \cite{adagrad}  proposed an adaptive sub-gradient method called AdaGrad to adjust the learning rate for parameters separately. Their method is based on an online learning setting. In online learning, a given loss function is not fixed because training data arrives through time. Without observing the whole dataset, parameters are updated in terms of a small regret. The regret of an online learning problem at time $T$ is the accumulated excess loss if it does not train a model with the whole accumulated dataset. Let $l_t()$ denote the loss function in time $t$, $\theta_t$ denote the vector parameter estimates in time $t$ and $\Theta$ denote the convex parameter space. The regret is expressed in equation below,
+\begin{equation}
+R(T)=\sum_{t=1}^Tl_t(\theta_t)-inf_{\theta\in\Theta}\sum_{t=1}^Tl(\theta)
+\end{equation}
+Let $\eta$ denote the learning rate, $g_t$ denote the vector of gradients at time step $T$ and $<a,b>$ denote the inner product of a and b.  $G_t=\sum_{k=0}^Tg_kg_k^{'}$. AdaGrad method employs the following updating rule:
+\begin{equation}
+\theta_{t+1}=argmin_{\theta\in\Theta}<\theta_t-\eta G_t^{-\frac{1}{2}}g_t,G_t^{-\frac{1}{2}}(\theta_t-\eta G_t^{-\frac{1}{2}}g_t)>
+\end{equation}
+
+In our implementation, we assume $\theta=\theta_t-\eta diag(G_t)^{-\frac{1}{2}}g_t\in\Theta$ where $diag(\cdot)$ returns a diagonal matrix of a given matrix. To to avoid zero inversion we also add a $\epsilon=10^{-8}$ in the diagonal matrix. The updating rule becomes
+\begin{equation}
+\theta_{t+1}=\theta_t-\eta_t g_t  
+\end{equation}
+where $\eta_t = \eta diag(G_t+\epsilon)^{-\frac{1}{2}}$
+
+The adaptive learning rates $\eta_t$ incorporate the history updating information of  parameters. If a parameter oscillates often, the learning rate of that parameter will be decreased. If a parameter is seldom updated because of data sparsity, once updated the learning rate of that parameter will still remain high. The drawback of AdaGrad is that adaptive learning rates are monotonically decreasing. If a learner jumps out of a local minimum, learning rates can not be lifted up again.  
+
+
+
+
+% It can be a problem if a token is the first node or the last node in the sentence so that it doesn't have 2 preceding words or 2 succeeding words. Therefore we artificially insert the two preceding words before the first word in the sentence as <START>, and the two succeeding words after the last word in the sentence as <STOP>. It can also be a problem if there is a word in the test data that is not occurred in the training data. Therefore we make the word occurred only once in the training set as ``<RARE>'' word. Besides, all words are converted into lower cases. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% lorem.tex ends here
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "demothesis"2
+%%% End: 

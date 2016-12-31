@@ -1,0 +1,46 @@
+%%% lorem.tex --- 
+%% 
+%% Filename: lorem.tex
+%% Description: 
+%% Author: Ola Leifler
+%% Maintainer: 
+%% Created: Wed Nov 10 09:59:23 2010 (CET)
+%% Version: $Id$
+%% Version: 
+%% Last-Updated: Wed Nov 10 09:59:47 2010 (CET)
+%%           By: Ola Leifler
+%%     Update #: 2
+%% URL: 
+%% Keywords: 
+%% Compatibility: 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Commentary: 
+%% 
+%% 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Change log:
+%% 
+%% 
+%% RCS $Log$
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Code:
+
+\chapter{Conclusion}
+\label{cha:conclusion}
+In this thesis, the feedforward neural network model proves to be an effective model in dependency parsing. It learns intermediate feature representations and releases the heavy labor of linguistic feature engineering. We find that normalized GloVe word embedding is a better initialization than the random initialization from a uniform distribution. Second, we find the cubic activation function outperforms tangent hyperbolic and tangent hyperbolic cubic activation function. Besides, though the distribution of dependency types is highly unbalanced, the analysis of experimental results shows it does not cause the model tend to predict dependency types of the majority.
+
+Compared to Pei et al. \cite{pei2015}, our neural network achieves a good UAS but a lower LAS. However we can not come to an conlusion about which model is better than the other because of the use of different head rules. We intepreted the max-margin training objective as minimizing the upper bound of posterior expected loss. Under this framework, the margin loss is seen as the empirical loss. The model performance is not affected by varying the margin loss function according to actual situations. Searching for a highest-scoring tree taking margin loss into account requires revising the Eisner algorithm. We proposed the Loss-Augmented Eisner algorithm to solve the problem. We introduced the feedforward neural network model as a generative model with the max-margin training objective. This generative neural network model can also be applied to a common classification problem. Rather than obtaining the highest score by Eisner algorithm, the highest score in a common classification problem is simply the maximum value in the output layer.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% lorem.tex ends here
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "demothesis"
+%%% End: 

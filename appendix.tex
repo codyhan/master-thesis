@@ -1,0 +1,92 @@
+\appendix
+\chapter{Appendix of Code Files}
+\begin{table}[h]
+\centering
+    \begin{tabular}{@{}p{4cm} p{11cm} @{}} \toprule
+  	File Name& Description\\ 
+  	act.java&It stores activation functions.\\ 
+  	dataIter.java&It reads in dependency trees and produces a data matrix in each batch iteration.\\ 
+  	DataShuffler.java&It shuffles the original treebank.\\ 
+  	EdgeFeaturizer\_NN.java&It transforms arcs into data representations.\\  
+  	EdgeScorer\_NN.java&It scores every pair of arcs in a sentence given a neural network model.\\ 
+  	Model\_NN.java&It stores information about word embeddings, postag embeddings, dictionary of dependency types, and dictionary of postags.\\ 
+  	Parser\_NN.java&It is a replicate of Parser.java which is made compatible with the neural network model.\\ 
+  	stats.java&It stores global methods.\\ 
+  	Trainer\_NN.java&It trains the neural network.\\ 
+  	VocReader.java&It reads the pretrained word embeddings into memory.\\ 
+  	cleanData.py &It preprocesses the original data.\\
+  	eval.py&It evaluates the performance of dependency parser excluding punctuations.\\
+  	normalData.py& It standardizes the GloVe word embeddings.\\
+  	\bottomrule 
+    \end{tabular}
+\caption{the Description of created Files}
+\end{table}
+\begin{table}[h]
+\centering
+    \begin{tabular}{@{}p{4cm} p{11cm} @{}} \toprule
+  	File Name& Description\\ 
+ 	CoNLLReader.java& It reads in dependency trees from a text file.\\
+ 	CoNLLTree.java& It creates the data structure for a dependency tree.\\
+ 	CoNLLWriter.java& It writes predicted dependency trees into a text file.\\
+ 	Parser\_NN.java& It performs Eisner algorithm.\\
+ 	Table.java& It creates the data structure for the dictionary of dependency types and the dictionary of postags.\\
+ 	\bottomrule 
+    \end{tabular}  
+\caption{the Description of existed Files}
+\end{table}
+
+\chapter{Appendix of Dependency Labels}
+Table \ref{tab:dt} provides description of dependency labels provided by Surdeanu et al. \cite{surdeanu2008conll}, Johansson and Richard \cite{johansson2008dependency}. Labels might be combined such as ADV-GSP.
+\begin{table}[H]
+\centering
+    \begin{tabular}{@{}l p{12cm} @{}} \toprule
+    Label&Description \\
+ADV& General adverbial\\
+AMOD& Modifier of adjective or adverbial\\
+APPO& Apposition\\
+BNF&  Benefactor complement (for) in dative shift\\
+CONJ& Second conjunct (dependent on conjunction)\\
+COORD& Coordination\\
+DEP& Unclassified relation\\
+DIR&  Adverbial of direction\\
+DTV&  Dative complement (to) in dative shift\\
+EXT&  Adverbial of extent\\
+EXTR& Extraposed element in expletive constructions\\
+GAP& Gapping: between conjunction and the parts of a structure with an ellipsed head\\
+HMOD& Modifier in hyphenation, such as two in two-part\\
+HYPH& Between first part of hyphenation and hyphen\\
+IM& Infinitive verb (dependent on infinitive marker to)\\
+LGS& Logical subject\\
+LOC& Locative adverbial or nominal modifier\\
+MNR& Adverbial of manner\\
+NAME& Name-internal link\\
+NMOD& Modifier of nominal\\
+OBJ& Direct or indirect object or clause complement\\
+OPRD& Object complement\\
+P& Punctuation\\
+PMOD& Between preposition and its child in a PP\\
+POSTHON&  Posthonorific modifier of nominal such as Jr, Inc.\\
+PRD& Predicative complement\\
+PRN& Parenthetical\\
+ 	\bottomrule 
+    \end{tabular}  
+\end{table}
+\begin{table}[H]
+\centering
+    \begin{tabular}{@{}l p{12cm} @{}} \toprule
+    Label&Description \\
+PRP&  Adverbial of purpose or reason\\
+PRT& Particle\\
+PUT& Various locative complements of the verb put\\    
+ROOT& Root\\
+SBJ& Subject\\
+SUB& Subordinated clause (dependent on subordinating conjuction)\\
+SUFFIX& Possessive suffix (dependent on possessor)\\
+TITLE& Titles such as Mr, Dr\\
+TMP& Temporal adverbial or nominal modifier\\
+VC& Verb chain\\
+VOC& Vocative\\
+ 	\bottomrule 
+    \end{tabular}  
+\caption{Description of Dependency Types}\label{tab:dt}
+\end{table}

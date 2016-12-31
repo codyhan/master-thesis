@@ -1,0 +1,372 @@
+%%% lorem.tex --- 
+%% 
+%% Filename: lorem.tex
+%% Description: 
+%% Author: Ola Leifler
+%% Maintainer: 
+%% Created: Wed Nov 10 09:59:23 2010 (CET)
+%% Version: $Id$
+%% Version: 
+%% Last-Updated: Wed Nov 10 09:59:47 2010 (CET)
+%%           By: Ola Leifler
+%%     Update #: 2
+%% URL: 
+%% Keywords: 
+%% Compatibility: 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Commentary: 
+%% 
+%% 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Change log:
+%% 
+%% 
+%% RCS $Log$
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Code:
+
+\chapter{Experiments and Results}
+\label{cha:results}
+This chapter reports the main experimental results of this thesis. First we assessed characteristics of the Penn treebank data and GloVe word embeddings. Second, we conducted several groups of experiments for parameter tuning. Next, we experimented with different initialization of word embeddings and postag embeddings. Finally, we experimented with different margin loss functions. The model with highest performance is selected among all experiments. We analysed predictions produced by this model. In the end, we compared our model with Pei et al.'s model.
+
+\section{Penn Treebank Data}
+\label{sec:penn}
+We choose the Penn Treebank Data as the training data in this thesis. The Penn treebank is a large annotated corpus created at the University of Pennsylvania \cite{marcus1993building}. It contains a wide range of materials include IBM computer manuals, nursing notes, Wall Street Journal articles and so forth \cite{taylor2003penn}. We used the Wall Street Jounal section (section 2-24) of Penn treebank which is a phrase-structured treebank. We used deterministic rules agreed on The Conference on Computational Natural Language Learning in 2008 (CoNLL 2008) \cite{surdeanu2008conll} to convert phrase-structured Penn treebank into a dependency treebank.
+%The dataset is a conversion of Penn tree bank. Linguist have defined rules to convert a phrase structure treebank into a dependency tree bank. Attempts have been made to predict a sentence phrase structure and the use rules to convert it to a dependency tree. However this approach doesn't achieve success. Therefore researchers endeavors directly to predict a sentence's dependency structure. 
+The dataset is split into three partitions by standard, sec2-21 as training set , sec22 as validation set and sec23 as test set. In the dataset, a sentence is decomposed of instances of words. Sentences are separated by a blank line. Table \ref{tab:data} provides a description of the fields of the dataset. Since values of field 3,4,5,6,9,10 are missing, they are not reported. Table \ref{tab:instance} shows the data format about the graph representation of a dependency tree in Figure \ref{fig:dptree}. One can reconstruct a depedency tree according to Table \ref{tab:instance}. For example, the head of the word ``Many'' is the 2\ts{nd} word in the sentence which is ``investors'' and their dependency type is ``NMOD''. 
+
+\begin{table}
+\centering
+    \begin{tabular}{ l  l  p{8cm} }\toprule
+    Field Number & Field Name & Description\\  \midrule
+    1 & ID & Index of a token, starting from 1 in each sentence\\ 
+    2 & FORM & Token form  \\ 
+    4 & POSTAG & Part of speech tag\\ 
+    7 & HEAD & Head ID of the current token, 0 refers to the root node\\ 
+    8 & DEPREL & Dependency type of the arc between the current token and its head \\ 
+    \bottomrule
+    \end{tabular}
+    \caption{Fields Description}\label{tab:data}
+\end{table}
+
+\begin{table}
+\centering
+    \begin{tabular}{@{}l l l l l l l l l l@{}} \toprule
+    ID&FORM& &POSTAG& & &HEAD&DEPREL&&\\ \midrule
+    1&Many&\_&JJ&\_&\_&2&NMOD&\_&\_ \\  
+    2&investors&\_&\_NNS&\_&\_&4&SBJ&\_&\_ \\ 
+    3&certainly&\_&RB&\_&\_&4&ADV&\_&\_ \\ 
+    4&believe&\_&VBP&\_&\_&0&ROOT&\_&\_ \\ 
+    5&a&\_&DT&\_&\_&7&NMOD&\_&\_ \\ 
+    6&bidding&\_&JJ&\_&\_&7&NMOD&\_&\_ \\ 
+    7&war&\_&NN&\_&\_&8&OBJ&\_&\_ \\
+    8&is&\_&VBZ&\_&\_&4&OBJ&\_&\_ \\ 
+    9&imminent&\_&JJ&\_&\_&8&PRD&\_&\_ \\  
+    10&.&\_&.&\_&\_&4&P&\_&\_ \\  
+    \bottomrule
+    \end{tabular}
+\caption{A Instance of Dependency Treebank}\label{tab:instance}
+\end{table}
+
+\section{Evaluation Metrics}
+\label{sec:Evaluation Metrics}
+We use Unlabeled Attachment Score (UAS) and Labeled Attachment Score (LAS) to measure the performance of a dependency parser. The single head property of dependency trees guarantees each word in the sentence only has one head. As the prediction for a word $x_i$ is its single head and the dependency type between the word and its head, i.e. $(\hat{y}_{i1},\hat{y}_{i2})$, the accuracy of a dependency parser can be assessed in terms of unlabeled arcs $(x_i,\hat{y}_{i1})$ and labeled arcs $(x_i,\hat{y}_{i1},\hat{y}_{i2})$. This is reflected by UAS and LAS in Equation \ref{eq:uas} \ref{eq:las}. 
+
+%While UAS and LAS measures the accuracy of a dependency parser on an arc level, Exact Match evaluates the accuracy on the sentence level. It is the exact percentage of correctly parsed sentences, as shown in Equation \ref{eq:exm}.
+\begin{align*}
+\label{eq:uas}
+&\text{UAS}= \frac{\text{Number of Correctly Predicted Unlabeled Arcs}}{\text{Total Number of Arcs}} \numberthis\\
+\\
+\label{eq:las}
+&\text{LAS}= \frac{\text{Number of Correctly Predicted Labeled Arcs}}{\text{Total Number of Arcs}} \numberthis\\
+\\
+%\label{eq:exm}
+%&\text{Exact Match}= \frac{\text{Number of Correctly Parsed Sentences}}{\text{Total Number of Sentences}} \numberthis
+\end{align*}
+
+To give an example, suppose there is only one training instance, ``John saw Mary.'', in the dataset. The real dependency tree and the predicted dependency tree is shown in Table \ref{tab:toy}. In the example, there is two correctly predicted unlabeled arcs and one correctly predicted labeled arc. ``Mary'' is predicted with  correct head but incorrect dependency type.  ``.'' is  predicted with both correct head and dependency type.  The UAS is $2/4=0.5$ and the LAS is $1/4=0.25$. Correctly predicting heads of punctuations is not important. In this thesis, we exclude punctuations when calculating UAS and LAS.
+
+%, and the exact match is $0/1=0$.
+\begin{table}
+\centering
+    \begin{tabular}{@{}l l l l l l@{}} \toprule
+    ID&FORM&HEAD&DEPREL&Predicted HEAD& Predicted DEPREL\\ \midrule
+    1&John&2&SBJ&0&ROOT\\
+    2&saw&0&ROOT&1&SBJ \\ 
+    3&Mary&2&OBJ&2&NMOD\\ 
+    4&.&2&P&2&P\\
+    \bottomrule
+    \end{tabular}
+\caption{An Example of Predictions}\label{tab:toy}
+\end{table}
+
+
+\section{Data Preprocessing}
+\label{sec:Data Preprocessing}
+Data preprocessing is a neccessary procedure. In this thesis, it includes three steps: 
+\begin{itemize}  
+\item Lowercase all the words
+\item Replace words occurred only once in the training set as <UNKNOWN> word, and words in the validation set and test set absent in the training set as <UNKNOWN> word. Numbers of words replaced in the training set, validation set and test set are 17831, 1411 and 1809 respectively.
+\item Artificially set the two preceding tokens before the first word in the sentence as <START>, and the two succeeding tokens after the last word in the sentence as <END>. This is because the input of neural network contains word embeddings of surrounding words of the head and the dependent in an arc. It can be a problem if a token is the first node or the last node in the sentence so that it does not have 2 preceding tokens or 2 succeeding tokens.
+\end{itemize}
+
+\section{Assessment of Data}
+\label{sec:Assessment of Data}
+\begin{table}
+\centering
+    \begin{tabular}{@{}p{3cm} l l l |p{2.2cm} l@{}} \toprule
+    Statistics&Training Set&Validation Set& Test Set&\# dependency types&\# postags\\  \midrule
+    \# tokens&950348&40121&56702&67&45\\
+    \# unique tokens&44352&6839&8423\\
+    \# sentences&39832&1700&2416\\
+    average sentence length&23.86& 23.60&23.47 \\
+    \bottomrule
+    \end{tabular}
+\caption{Basic Statistics of Penn Treebank Data}\label{tab:bstat}
+\end{table}
+In this section, we explore the nature of the Penn treebank data and the GloVe word embeddings. Table \ref{tab:bstat} summarizes basic statistics of Penn treebank data. The size of validation set and test set is about 5\% of the training set. There is no obvious difference of average sentence length among three datasets. The unique number of dependency types and postag is 67, 45 respectively. Next we are interested in the distribution of dependency types. Figure \ref{fig:dpfreq} plots the frequency of dependency type in the training set. The top three most frequency dependency types are NMOD, P, PMOD. The number of root relation equals to the number of sentences as each sentence only has one root node. The number of subject relation is twice time as the number of root type, indicating on average each English sentences in the training set has one subordinate clause. The distribution of dependency types is quite unbalanced. We will analyze whether the nature of this unbalance will affect the parser prone to output dependency types which are of the majority in Section \ref{sec:Anpred}.
+
+\begin{figure}
+  \centering
+    \includegraphics[width=0.9\textwidth]{dpfreq}
+  \caption{Barplot of Dependency Types}
+  \label{fig:dpfreq}
+\end{figure}
+
+A neural network is trained faster if the scale of variables is of the same range. We investigate the scale of word embeddings in the training data. Figure \ref{fig:dpfreq} shows the boxplot of word embeddings with 50 dimensions. As it can be seen, the scale of the word embeddings is almost at the same range from -1 to 1 except the 31\ts{th} dimension. We do not know the reason that this dimension is special as the data is abstract representations of words. Standardizing the word embeddings by minus mean and divided by standard deviation will to some extent lose the syntactic and semantic information kept in the word embeddings. We alternatively normalize word embeddings in unit length since the cosine similarity between two word vectors will not be changed by vector normalization. Figure \ref{fig:boxplot1} shows the boxplot after vector normalization, it seems that the problem is not solved. However we can also randomly initialize word embeddings and postag embeddings to force the data in the same scale.
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{boxplot}
+        \caption{before Normalization}
+        \label{fig:boxplot}
+    \end{subfigure}
+    ~
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{boxplot1}
+        \caption{after Normalization}
+        \label{fig:boxplot1}
+    \end{subfigure}
+    \caption{Boxplot of GloVe Word Embeddings}\label{fig:boxemb}
+\end{figure}
+
+\begin{table}
+\centering
+    \begin{tabular}{@{}l l l l l l@{}} \toprule
+    Quantile &2\%&25\%&50\%&75\%&98\% \\ \midrule 
+    GloVe&-1.265&-0.367&0.020&0.407&1.316 \\  
+    normGloVe&-0.267&-0.085&0.005&0.095&0.277 \\  
+    \bottomrule
+    \end{tabular}  
+\caption{Comparison of Quantile Mean}\label{tab:quantile}
+\end{table}
+Table \ref{tab:quantile} calculated the averaged quantile among 50 dimensions for GloVe word embeddings and normalized Glove word embeddings. The motivation is to set the postag embedding around the same range with word embeddings. According to Table \ref{tab:quantile}, we roughly designed three settings of data representations as shown in Table \ref{tab:quantile}.
+\begin{table}
+\centering
+    \begin{tabular}{@{}l l l@{}} \toprule
+    Embedding Setting&Word Embeddings & Postag Embeddings \\  \midrule
+    Emb1&Glove& runif(-1,1)\\
+    Emb2&normGlove& runif(-0.2,0.2)\\
+    Emb3&runif(-0.01,0.01)&runif(-0.01,0.01)\\
+    \bottomrule
+    \end{tabular}
+\caption{Embedding Settings}\label{tab:datarp}
+\end{table}
+
+\section{Computer Environment}
+\label{sec:Experiments Environment}
+The computing platform is iMAC with 2.5 GHz Intel Core i5 processor and 12 GB RAM. The dependency parsing system is implemented in JAVA with Gradle build manager.  The library ND4j is used for matrix operations. The Eisner algorithm has already been created in an earlier system \footnote[4]{https://github.com/liu-nlp/beta}. We adjust it to be compatible with the neural network. The neural network along with the training objective, dropout and AdaGrad were implemented by the author. Table \ref{tab:runtime} reports the average running time and the prediction speed of our dependency parser.
+\begin{table}
+\centering
+    \begin{tabular}{@{}l l @{}} \toprule
+    Running Time of Training & 2.8 hour/epoch\\ 
+    Parsing Speed& 13.9 sentence/second\\
+    \bottomrule
+    \end{tabular}
+\caption{Table of Running Time}\label{tab:runtime}
+\end{table}
+
+\section{Hyper Parameter Tuning}
+\label{sec:Parameter Tuning}
+Due to the non-linearity of neural networks, the objective function is non-convex. Therefore there are many local optimums. It is important to tune the hyper parameters to find a better local optimum. The hyper parameters in the neural network model include learning rate, number of hidden neurons, dropout rate, l2 rate $\lambda$, activation function, batch size, margin loss discount factor $\tau$, the dimension of word embeddings, the dimension of postag embeddings. The total number of hyper parameters is 9. Suppose each hyper parameter has three options. A grid search will loop through $3^9=19683$ possibilities. Considering the running time of one epoch, it is impractical for us to explore the hyper parameter space exhaustively. Since parameter tuning is not the top priority of this thesis, we adopted a basic parameter setting from Chen et al. \cite{chen2014fast} and Pei et al. \cite{pei2015}. We did a preliminary exploration to see if the model performance is sensitive to any single change of hyper parameters. The basic settings of our model are word embedding size 50 randomly initialized from uniform distribution (-0.01,0.01), postag embedding size 50 randomly initialized from uniform distribution (-0.01,0.01), parameters of the neural network randomly initialized from uniform distribution (-0.01,0.01), hidden layer size 200, activation function tangent hyperbolic, AdaGrad learning rate 0.01, dropout rate 0.5, regularization parameter 0.0001, margin loss discount factor 0.3, batch size 20 and epoch 1. In the following experiments, we keep all parameters the same except the parameter to be tuned. 
+
+\begin{table}
+\centering
+    \begin{tabular}{@{}c c|l l l@{}} \toprule
+    Experiment&Random Seed&Learning Rate & UAS & LAS \\  
+    1&7522&0.001&70.85\%&64.64\% \\  
+    &&0.01&85.86\% &81.21\% \\
+    &&0.1&14.60\% &2.81\% \\  \midrule
+    Experiment&Random Seed&Hidden Units & UAS & LAS \\  
+    2&5438 &100&85.47\% &80.19\% \\  
+    &&200&85.74\% &80.74\% \\
+    &&400&85.57\% &80.63\% \\  \midrule
+    Experiment&Random Seed&Dropout Rate& UAS & LAS \\  
+    3&3794&0.5&85.84\% & 80.77\%\\  
+    &&0.7&86.13\% & 80.96\%\\
+    &&1 &85.89\% &80.56\% \\  \midrule
+    Experiment&Random Seed&l2 Rate& UAS & LAS \\  
+    4&2975&0.00001&85.94\% &81.24\% \\  
+    &&0.0001&85.85\% &81.14\% \\
+    &&0.001&84.99\% &79.90\% \\  \midrule
+    Experiment&Random Seed&Activation Function& UAS & LAS \\  
+    5&8756&tanh&85.64\%&80.82\% \\  
+    &&tanhcubic&85.44\% &80.60\% \\
+    &&cubic&87.59\% &81.63\% \\ \midrule
+    Experiment&Random Seed&Batch Size& UAS & LAS \\  
+    6&7534&20&85.72\%&81.11\% \\  
+    &&30&85.74\%&80.83\% \\
+    &&40&85.29\% &80.39\% \\  \midrule
+    Experiment&Seed& Margin Loss Discount Factor& UAS & LAS \\  
+    7&2837& 0.3& 85.76\%& 81.16\%\\  
+    && 0.6& 85.80\%& 81.15\%\\
+    && 0.9& 85.85\%& 81.04 \%\\  
+    \bottomrule
+    \end{tabular}  
+\caption{Hyper Parameter Tuning}\label{tab:tune}
+\end{table}
+
+From Table \ref{tab:tune}, the learning rate is the most sensitive hyper parameter. A high learning late severely impairs the model performance. The choice of learning rate 0.01 is relative optimal.
+Tuning the number of hidden units, dropout rate, l2 rate, batch size, and margin loss discount factor does not give a significant improvement of model accuracy. The effect of these hyper parameters are not seen partly due to the fact that the neural network is trained with only one epoch for the sake of computation time.
+
+In experiment 5, the cubic activation function learns faster than tanh and tanhcubic. This is contrary to Pei et al.'s finding \cite{pei2015}. In their experiments, tanhcubic performs dramantically better than tanh in the first epoch. In our opinion, Pei et al. used a bigger learning rate causing the cubic function unstable in the first several opochs as a neural network with the cubic activation function can explode with large inputs.  
+
+\section{Experimental Result with Different Embedding Settings}
+In this experiment, our main interest is whether the pre-trained word embeddings improves the model performance. Three embedding settings were chosed in Section \ref{sec:Assessment of Data}. The parameter settings are parameters of the neural network randomly initialized from uniform distribution (-0.01,0.01), hidden layer size 200, activation function cubic, AdaGrad learning rate 0.01, dropout rate 0.5, regularization parameter 0.0001, margin loss discount factor 0.3, batch size 20, and epoch 20 and random seed 3425. In the experiment, we keep all parameters the same except the word embeddings and postag embeddings. 
+\begin{table}
+\centering
+    \begin{tabular}{@{}l|p{2cm} l l l l@{}} \toprule
+    Experiment&Embedding Setting&Word Embeddings& Postag Embeddings& UAS & LAS \\  \midrule
+    8&Emb1&runif(-0.01,0.01)&runif(-0.01,0.01)&91.44\% &86.88\% \\  
+    &Emb2&glove&runif(-1,1)&91.44\% &86.15\% \\  
+    &Emb3&normglove&runif(-0.2,0.2)&91.83\% &87.11\% \\
+    \bottomrule
+    \end{tabular}
+\caption{Comparison of Embeddings Settings}\label{tab:expemb}
+\end{table}
+
+Table \ref{tab:expemb} reports experimental results with three different embedding settings. From Table \ref{tab:expemb}, Emb3 gives a better result than Emb1 and Emb2. Emb2 reached a same UAS as Emb1 but a lower LAS. Emb2 has a larger scale than Emb1 and Emb3 causing hidden neurons recieve larger inputs. As the cubic activation function increases inputs with triple growth, the neural network with Emb2 might be unstable in the begining. Figure \ref{fig:convergemb} shows the convergence plot of this experiment. The Unlabelled Attachment Scores of all three embeddings are converged. From Figure \ref{fig:convergemb}, Emb3 evidently learns faster than Emb1 and Emb2 in the first epoch. The Emb3 includes the normalized GloVe word embeddings. The normalized GloVe word embeddings retained cosine distance relationship among word embeddings. It is an effective initialization of word embeddings according to the results. In the next experiment, the embedding setting will be replaced by Emb3.
+\begin{figure}
+  \centering
+    \includegraphics[width=0.8\textwidth]{emb}
+  \caption{Convergence plot of Experiment 8}
+  \label{fig:convergemb}
+\end{figure}
+
+
+\section{Experimental Results with Different Margin Loss Functions}
+In Section \ref{sec: Structural Support Vector Machine}, we mentioned that the objective function can be interpreted as minimizing the upper bound of posterior expected loss. This allows us to adjust the margin loss $\Delta(y^j,\hat{y}^j)$ according to different assumptions. Previous experiments assumes that a loss is incurred if an arc is wrongly predicted both in terms of the head of a word and their dependency type. However, it is reasonable that we would expect a lower loss if the model predicts the right head of a word with a wrong dependency type. In this section, we compare different margin loss functions. These loss functions are defined as,
+\begin{align*}
+\Delta_1(y^j,\hat{y}^j)&=0 \numberthis\\
+\Delta_2(y^j,\hat{y}^j)&=0.3 \sum_i (\hat{y}_{i1}^j\neq y_{i1}^j|| \hat{y}_{i2}^j\neq y_{i2}^j) \numberthis\\
+\Delta_3(y^j,\hat{y}^j)&=0.2 \sum_i (\hat{y}_{i1}^j\neq y_{i1}^j)+0.1 \sum_i (\hat{y}_{i1}^j\neq y_{i1}^j\& \hat{y}_{i2}^j\neq y_{i2}^j) \numberthis
+\end{align*}
+In the experiment, $\Delta_1(\cdot)$ corresponds to zero margin loss, $\Delta_2(\cdot)$ corresponds to the default margin loss function in previous experiments, and $\Delta_3(\cdot)$ corresponds to the lower margin loss in the case that the head of a word is predicted correctly but their dependency type is predicted incorrectly.
+%\begin{table}
+%\centering
+%   $a\xleftarrow[]{NMOD} war$&$a\xleftarrow[]{ADV} bidding$&0&0.3&0.3\\
+ %   $a\xleftarrow[]{NMOD} war$&$a\xleftarrow[]{NMOD} bidding$&0&0.3&0.2\\
+  %  $a\xleftarrow[]{NMOD} war$&$a\xleftarrow[]{ADV} war$&0&0.3&0.1\\
+   % \bottomrule
+    %\end{tabular}  
+%\caption{Comparison of Margin Loss Functions}\label{tab:dfmar}
+%\end{table}
+
+The parameter settings are GloVe word embedding size 50, postag embedding size 50 randomly initialized from uniform distribution (-0.2,0.2), parameters of the neural network randomly initialized from uniform distribution (-0.01,0.01), hidden layer size 200, activation function cubic, AdaGrad learning rate 0.01, dropout rate 0.5, regularization parameter 0.0001, margin loss discount factor 0.3, batch size 20 and epoch 20. In the experiment, we keep all parameters the same except margin loss functions. 
+\begin{table}
+\centering
+    \begin{tabular}{@{}l l|c l l @{}} \toprule
+    Experiment&Random Seed&Margin Loss functions& UAS & LAS \\  
+    9&9628&$\Delta_1(\cdot)$& 92.13 & 87.48\\  
+    &&$\Delta_2(\cdot)$& 91.95& 87.38\\  
+    &&$\Delta_3(\cdot)$& 92.14& 87.44\\  
+    \bottomrule
+    \end{tabular}  
+\caption{Comparison of Margin Loss Functions}\label{tab:maglos}
+\end{table}
+
+Practically, the role of the margin loss function during training is to encourage the graph search algorithm to return a high-scoring tree but a rather different one than the real tree so that the score of this tree will be decreased and the score of the real tree will be increased. With a zero margin loss, the highest-scoring tree will be close to the real tree, passing less information to the model as two trees cancelled each other in the training objective. 
+
+However, from Table \ref{tab:maglos}, there is no obvious difference in terms of performance among these margin loss functions. One possible reason is that neural networks with these three margin loss functions learn equally in the beginning because parameters are pretty random and the highest-scoring tree is by no means different than the real tree. As the AdaGrad learning rate is monotonically decreasing through time, even these three loss functions act differently later, those parameters which are frequently updated already become stable. In the future, we will try different adaptive gradient descent methods to investigate this potential problem caused by AdaGrad.
+
+\section{Analysis of Predictions}
+\label{sec:Anpred}
+The result with highest performance we have obtained so far is from experiment 9 with $\Delta_1(\cdot)$ margin loss function. In this section, to get some insight about the source of errors made by the neural network model, we analyzed predicted trees produced by this result.  
+
+The gap between UAS and LAS is 4.64\%. Given the head of a word is correctly predicted, the accuracy of predicting the dependency types is $87.48/92.12=94.96\%$. We would like to know what type of mistake the neural network is prone to make under this condition. Figure \ref{fig:confg} and Figure \ref{fig:confp} plot the confusion matrix given the head of a word is correctly predicted.  Figure \ref{fig:confg} plots the confusion matrix scaled by golden labels. By ``scaled by golden labels'', we mean the value in a confusion matrix is divided by the total number of its corresponding dependency type in a dataset. For example, suppose 9 of ``NMOD'' are predicted as ``ADV'', the total number of ``NMOD'' in a dataset is 10, then the value in a confusion matrix scaled by golden labels is 0.9. In Figure \ref{fig:confg}, on the y axis, dependency types are printed together with their total number. It shows the distribution of predicted dependency types given the total number of each dependency type in a dataset. Similarly Figure \ref{fig:confp} shows the distribution of real dependency types given the total number of predictions for each dependency type.
+
+In Figure \ref{fig:confg}, we see that GAP-PMOD, GAP-OBJ and GAP-NMOD are fully predicted as CONJ. However it is not a serious problem because the number of these dependency types is only one or two.  Figure \ref{fig:confg} and Figure \ref{fig:confp}, it seems that the neural network has difficulty in distinguishing between ADV and some less frequent dependency types. Checking Appendix B, we find that most of these misclassified dependency types are subclasses of ADV such as TMP, PRP, MNR, and DIR. It is therefore reasonable that the neural network fails to capture small difference between these dependency types. In general, from Figure \ref{fig:confg} and Figure \ref{fig:confp}, as most blocks are concentrated on the diagonal line, the problem of unbalanced data mentioned in Section \ref{sec:Assessment of Data} has little influence on biasing model predictions.
+
+
+
+\begin{figure}
+  \centering
+    \includegraphics[width=0.8\textwidth]{confg}
+  \caption{Confusion Matrix Scaled by Golden Labels}
+  \label{fig:confg}
+\end{figure}
+
+\begin{figure}
+  \centering
+    \includegraphics[width=0.8\textwidth]{confp}
+  \caption{Confusion Matrix Scaled by Predicted Labels}
+  \label{fig:confp}
+\end{figure}
+
+
+\section{Model Comparison}
+\label{sec:Model Comparison}
+In this section we compare our model with the highest LAS obtained in Experiment 9 with Pei et al.'s model. We compare it with Pei et al.'s 1-order-atomic model. This model contains the same set of features as in our model. The 1-order-atomic refers to assuming independence between arcs and using pre-trained word embeddings. Table \ref{tab:compmd} reports the comparison of model performance. 
+
+\begin{table}
+\centering
+    \begin{tabular}{@{}l l l l l@{}} \toprule
+    & \multicolumn{2}{c}{Validation} & \multicolumn{2}{c}{Test} \\ 
+    Model&UAS&LAS&UAS&LAS\\
+    \cmidrule{2-3} \cmidrule{4-5}
+    Pei 1-order-atomic&92.19&90.94&92.14&90.92 \\
+    This work&92.12 &87.48&91.59&87.34\\  
+    \bottomrule
+    \end{tabular}
+\caption{Model Comparison}\label{tab:compmd}
+\end{table}
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{peicon}
+        \caption{Convergence plot of Pei et al.'s model}
+        \label{fig:peicon}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{convergence}
+        \caption{Convergence plot of our model}
+        \label{fig:converg}
+    \end{subfigure}
+    \caption{Comparison of Convergence Plot}\label{fig:comconverg}
+\end{figure}
+
+From Table \ref{tab:compmd}, we reached a good UAS but a lower LAS. the difference between UAS and LAS of our model is bigger than that of Pei et al.'s model. Figure \ref{fig:comconverg} compared convergence plots of two models. In Figure \ref{fig:peicon}, Pei et al. plotted the learning curve of neural networks with tanhcubic and cubic functions respectively. In Figure \ref{fig:converg}, it plotted the learning curve of our neural network with the cubic activation function. As discussed in Section \ref{sec:Parameter Tuning},  the learning speed of cubic activation function in our model is faster than Pei et al.'s model.
+
+The main difference between our model and Pei et al.'s model is that they used two neural networks to model the score of right arcs and left arcs separately while our model ignored the feature about arc directions and only used one neural network. This feature may have effects on both UAS and LAS. For example, it makes sense that the arc ``drink''$\leftarrow$``water'' should be scored higher than ``drink''$\rightarrow$``water''. However, as surrounding words of the arc are taken as features, the arc ``drink''$\leftarrow$``water'' and ``drink''$\rightarrow$``water'' can hardly have same data representions. This helps the neural network differentiate these two arcs. The lack of information about arc directions can affect the Labeled Attachment Score more because postags of two words in the arc are crucial features in determining their dependency type. For example, an left arc pointing from a verb to a noun is more likely to be labeled as OBJ than a right arc with the same postags. Pei et al.'s model has approximately 200,000 parameters more than ours. With the increase of model parameters, the computation cost is also increased. The parsing speed of Pei et al. is 55 sentence per second. However, parsing speeds of our model and their model are not comparable as the computer environment is different.
+In future work, we can incorporate arc directions in our model by doubling the number of neurons in the output layer. The output of a neuron in the output layer will represent the score of an arc with a specific dependency type and its arc direction. This modification only increases about 13000 parameters.   
+
+Another difference is that Pei et al. used Yamada and Matsumoto \cite{yamada2003statistical} head rules to convert pharsed structured Penn treebank to dependency treebank while we used head rules agreed on CoNLL 2008 \cite{surdeanu2008conll}. Input sencetences are the same but dependency strutures are annotated differently. The number of dependency types in our dataset is more than that in Pei et al.'s dataset. This partly explains that the difference between UAS and LAS of our model is bigger than that of Pei et al.'s model.  
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% lorem.tex ends here
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "demothesis"
+%%% End: 

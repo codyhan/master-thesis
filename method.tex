@@ -1,0 +1,317 @@
+%%% lorem.tex --- 
+%% 
+%% Filename: lorem.tex
+%% Description: 
+%% Author: Ola Leifler
+%% Maintainer: 
+%% Created: Wed Nov 10 09:59:23 2010 (CET)
+%% Version: $Id$
+%% Version: 
+%% Last-Updated: Wed Nov 10 09:59:47 2010 (CET)
+%%           By: Ola Leifler
+%%     Update #: 2
+%% URL: 
+%% Keywords: 
+%% Compatibility: 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Commentary: 
+%% 
+%% 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Change log:
+%% 
+%% 
+%% RCS $Log$
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Code:
+
+\chapter{Methodology}
+\label{cha:method}
+This chapter aims at explaining the way of training the score function in Equation \ref{eq:ctr1} which is in the form of a neural network. Section \ref{sec: Structural Support Vector Machine} describes the training objective both from a probabilistic view and a non-probabilistic view as both perperpectives have good interpretations. Section \ref{sec:Loss-Augmented Eisner Algorithm} proposes the Loss-Augmented Eisner Algorithm that will be used in decoding a possibly wrong tree with a high score during training. Section \ref{sec:Generative Neural Network} introduces a neural network as a generative neural network and demonstrates how the neural network works as a score function. In this chapter, we denote $x^j$ as the $j$\ts{th} sentence in a training set and $y^j$ as the desired output for the $j$\ts{th} sentence.
+
+
+\section{Max-margin Training Principle}
+\label{sec: Structural Support Vector Machine}
+Structured prediction can be seen as classifying an object to a possible structure out of an exponential large number of candidates. For example, in dependency parsing, it classifies a sentence $x$ to a possible syntactic structure $\hat{y}\in Y$ where $Y$ is a finite set. A big difference between a structured prediction problem and a common classification problem is that the output space $Y$ is dependent on $x$ for structured classification problems while the output space $Y$, such as $\{0,1\}$, is fixed for classification problems. In dependency parsing, each sentence from a training set is different thus the output space of each sentence also differs. Assuming a distribution of $y$ given data and parameters directly is not feasible for structured learning. However, since the output space is a finite discrete set, it is possible to assume the conditional distribution indirectly by Bayes rule.
+\begin{equation}
+\label{eq:bayesrule}
+p(y|x,\theta)=\frac{p(x,y|\theta)}{\sum_{y^{'}\in Y}p(x,y^{'}|\theta)}
+\end{equation} 
+The probabilistic approach in dependency parsing commonly assumes that the distribution of $(x,y)$ is from an exponential family, as shown in Equation \ref{eq:likelihood}. 
+\begin{equation}
+\label{eq:likelihood}
+p(x,y|\theta)\propto e^{\theta^T\phi(x,y)}
+\end{equation} 
+Let us assume a prior for $\theta$,
+\begin{equation}
+\label{eq:prior}
+p(\theta)=\frac{e^{-f(\theta)}}{Z}
+\end{equation} 
+where $f(\cdot)$ is a function of $\theta$ and $Z$ is a constant.
+A Bayesian approach normally simulates the posterior distribution of parameters through Markov chain Monte Carlo. By Bayesian decision theory, the choice of parameters estimates is based on minimizing the posterior expected loss. For example, 0-1 loss corresponds to MAP estimates, quadratic loss corresponds to mean estimates, and absolute loss corresponds to median estimates. In our problem, a full Bayesian approach is intractable because of the number of parameters, the size of the output space and the size of the training set. Max-margin training principle, in some literature referred as structural supporter machine, practically defines the posterior expected loss on a training set as a function of 
+$\theta$ as shown in Equation \ref{eq:exloss}. This function has no exact form however it has an exact form for its upper bound. Therefore a set of point estimates can be computationally efficiently derived by minimizing the upper bound of posterior expected loss on a training set. By Murphy \cite{murphy2012machine}, the posterior expected loss on a training set is defined as
+\begin{equation}
+\label{eq:exloss}
+R_{EL}(\theta)=-\log p(\theta)+\sum_{j=1}^N \log(\sum_{y^j\in Y^j}L(y^j,\hat{y}^j)p(y^j|x^j,\theta))
+\end{equation}
+where $L(y^j,\hat{y}^j)$ is the loss incurred when the predicted structure is $\hat{y}^j$ and the true structure is $y^j$. Set $L(y^j,\hat{y}^j)$ to be the exponential of the empirical loss $\Delta(y^j,\hat{y}^j)$. In the other way around, $\Delta(y^j,\hat{y}^j)= \log L(y^j,\hat{y}^j)$.  By Murphy \cite{murphy2012machine}, the upper bound of posterior expected loss is 
+\begin{equation}
+\label{eq:upb}
+R_{EL}(\theta)\leq  f(\theta)+\sum{max_{\hat{y}^j\in Y^j}(\theta^T\phi(x^j,\hat{y}^j)+\Delta(y^j,\hat{y}^j))-\theta^T\phi(x^j,y^j)}
+\end{equation}
+
+Max-margin training principle derives its name from a non-probabilistic view. It maximizes the margin between a correctly predicted structure and an incorrectly predicted structure. The goodness of a possible structure is measured by a score function $Score(x,y,\theta)$ interpreted as the log joint probability from the probabilistic view.
+\begin{equation}
+\label{eq:score}
+Score(x,y,\theta)=\theta^T\phi(x,y)
+\end{equation}
+The training criteria is that the excess score between a correct structure and an incorrect structure should be at least larger than a margin loss $\Delta(y,\hat{y})$. 
+\begin{equation}
+\label{eq:margin}
+Score(x,y,\theta)-Score(x,\hat{y},\theta)\geq\Delta(y,\hat{y})
+\end{equation}
+By Ratliff \cite{mmsc}, Equation \ref{eq:margin} leads to minimize the following objective function
+\begin{equation}
+\label{eq:cost}
+c(\theta)=\frac{1}{n}\sum{(l_j(\theta)+\frac{\lambda}{2}||\theta||^2)}
+\end{equation}
+where $c(\cdot)$ represents the objective function, $l_j(\theta)=max_{\hat{y}^j\in Y^j}(Score(x^j,\hat{y}^j,\theta)+\Delta(y^j,\hat{y}^j))-Score(x^j,y^j,\theta)$
+
+In Equation \ref{eq:upb}, if the prior of $\theta$ is assumed to be $N(0,\lambda^{-1}I_n)$, then $f(\theta)=0.5\lambda||\theta||^2$. The upper bound of the posterior expected loss on a training set has the same form as the objective function in Equation \ref{eq:cost}. The empirical loss $\Delta(y^j,\hat{y}^j)$ in Equation \ref{eq:exloss} corresponds to the margin loss in Equation \ref{eq:margin} . In dependency parsing, the margin loss can be the number of incorrect predicted arcs. Since $\Delta(y^j,\hat{y}^j)$ is not differentiable with respect to $\theta$, the sub-gradient method is used. This method, first introduced by Naum \cite{shor}, deals with the problem of optimizing non-differentiable convex functions. In a gradient descent algorithm, one can update parameters by sub-gradients instead of gradients. A sub-gradient of convex function $f$ is any vector $g$ satisfying the inequality,
+\begin{equation}
+\label{eq:subgrad}
+f(\theta_1)\geq f(\theta_2)+g(\theta_1-\theta_2)
+\end{equation}
+By Equation \ref{eq:subgrad}, the sub-gradient of the loss function $l_j(\theta)$ is
+\begin{equation}
+\label{eq:subg}
+\frac{\partial}{\partial\theta}l_j(\theta)=\frac{\partial}{\partial\theta}Score(x^j,\hat{y}^j,\theta)-\frac{\partial}{\partial\theta}Score(x^j,y^j,\theta)
+\end{equation}
+where $\hat{y}^j =arg max_{\hat{y}^j\in Y^j}(Score(x,\hat{y}^j,\theta)+\Delta(y^j,\hat{y}^j))$
+
+
+The derivation of $\hat{y}^j$ is a result of a graph search algorithm. In next section, we will propose the Loss-Augmented Eisner Algorithm for decoding $\hat{y}$ in Equation \ref{eq:subg}.
+
+\section{Loss-Augmented Eisner Algorithm}
+\label{sec:Loss-Augmented Eisner Algorithm}
+The Eisner Algorithm decomposes the score of a tree into scores of individual arcs. 
+\begin{equation}
+\label{eq:indp}
+Score(x,y,\theta)=\sum_i score(x_i,y_{i1},y_{i2},\theta)
+\end{equation}
+Taking the probabilistic view from the max-margin training objective, a score function is interpreted as the log joint probability of $(x,y)$. This allows us to interpret Equation \ref{eq:indp} as assuming the occurrence of an arc is independent of other arcs. The Eisner algorithm is a combinatorial optimization algorithm which searches for a highest-scoring tree given scores of all possible arcs. However, in the max-margin training objective, one necessary step is to search for $\hat{y}^j = arg max_{\hat{y}^j\in Y^j}(Score(x,\hat{y}^j,\theta)+\Delta(y^j,\hat{y}^j))$. It is the highest-scoring tree taking the margin loss $\Delta(y^j,\hat{y})$ into account. The margin loss $\Delta(y^j,\hat{y})$ is defined as the number of incorrectly predicted arcs discounted by a factor $\tau$ \cite{pei2015} \cite{kiperwasser2016simple},
+\begin{equation}
+\label{eq:delta}
+\Delta(y^j,\hat{y}^j)=\tau \sum_i (\hat{y}_{i1}^j\neq y_{i1}^j|| \hat{y}_{i2}^j\neq y_{i2}^j)
+\end{equation} 
+The parameter $\tau$ controls the scale of the margin loss. During training, a margin loss let a graph search algorithm find a possibly wrong tree with a high score. By the training objective, the score of this wrong tree will be decreased and the score of the correct tree will be increased. If the parameter $\tau$ is too small, the returned tree by a graph search algorithm might be close to the correct tree. Scores of two trees in the training objective mostly canceled each other. If the parameter $\tau$ is too large, the returned tree will be far from the correct tree. However, the returned tree might have a low score. Updating parameters by the direction of an incorrect tree with a low score does not contribute to model performance as this incorrect tree is already unlikely to be outputted in prediction.
+
+To solve the problem of finding a highest-scoring tree taking margin loss into account, we propose the Loss-augmented Eisner Algorithm. To our knowledge, we are the first who incorporate the margin loss into the Eisner algorithm. In Pei et al. \cite{pei2015} and Kiperwasser et al. \cite{kiperwasser2016simple}, the way they derive $\hat{y}$ in the max-margin training objective is not clear. The margin loss is integrated into the Eisner algorithm as an extra score $\tau$ when an arc does not exist in the correct tree as what Equation \ref{eq:delta} indicates. Concretely, if an possible arc $(x_i^j,\hat{y}_{i1}^j,\hat{y}_{i2}^j)$ in a sentence meet the condition $\hat{y}_{i1}^j\neq y_{i1}^j|| \hat{y}_{i2}^j\neq y_{i2}^j$, the score of this arc will be added by $\tau$.
+ Algorithm \ref{Algo2} presents the Augmented-loss Eisner algorithm. Steps identical to those in Algorithm \ref{Algo1} is omitted.
+\begin{algorithm}
+\caption{Loss-augmented Eisner Algorithm}
+\label{Algo2}
+\begin{algorithmic}
+\STATE 0: \textbf{input} a tree $(x,y)$, score(target $x_i$, head $x_j$, dependency type $r$, weight $\theta$) 
+\STATE ...
+\STATE 6: if t > n break
+\STATE 7:  \hspace{2mm}if $arc(x_s,x_t,argmax_r score(x_s,x_t,r,\theta)$ in the input tree$(x,y)$
+\STATE 8:  \hspace{5.75mm}$C[s][t][0][1]=max_{s\leq q<t}(C[s][q][1][0]+C[q+1][t][0][0])+max_r score(x_s,x_t,r,\theta)$
+\STATE 9:  \hspace{2mm}else
+\STATE 10: \hspace{4mm}$C[s][t][0][1]=max_{s\leq q<t}(C[s][q][1][0]+C[q+1][t][0][0])+max_r score(x_s,x_t,r,\theta)+\tau$
+\STATE 11: \hspace{0.5mm}if $arc(x_t,x_s,argmax_r score(x_t,x_s,r,\theta)$ in the input tree$(x,y)$
+\STATE 12: \hspace{4mm}$C[s][t][1][1]=max_{s\leq q<t}(C[s][q][1][0]+C[s][q+1][0][0])+max_r score(x_t,x_s,r,\theta)$
+\STATE 13: \hspace{0.5mm}else
+\STATE 14: \hspace{4mm}$C[s][t][1][1]=max_{s\leq q<t}(C[s][q][1][0]+C[q+1][t][0][0])+max_r score(x_t,x_s,r,\theta)+\tau$
+\STATE 15: \hspace{0.5mm}$C[s][t][0][0]=max_{s\leq q<t}(C[s][q][0][0]+C[s][q][0][1])$
+\STATE 16: \hspace{0.5mm}$C[s][t][1][0]=max_{s\leq q<t}(C[s][q][1][1]+C[s][q][1][0])$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Generative Neural Network}
+\label{sec:Generative Neural Network}
+Feedforward neural networks are mostly applied as discriminative models. They model the conditional probability of $y$ given data and parameters directly. In this section, we will present a feedforward neural network model as a generative model which works as a score function in a dependency parser. In dependency parsing, the generative neural network models the joint probability of a sentence and its syntactic structure. Assuming the occurrence of an arc is independent of other arcs in the sentence, the joint probability $p(x,y)$ is factorized as, 
+\begin{equation}
+p(x,y)=\prod_{i=1}^{n}p(x_i,y_i)
+\end{equation}
+Note that $x_i$ represents the $i$\ts{th} word in the sentence, $y_i$ consists of $y_{i1}$ and $y_{i2}$, representing the head of $x_i$ and the index of dependency type between $x_i$ and $y_{i1}$ respectively.
+Assume the joint distribution of $(x_i,y_i)$ is from an exponential family, the generative neural network takes the form:
+\begin{align*}
+\label{eq:gnn}
+\log p(x_i,y_i)&\propto \theta_{n-1}^T\phi_{n-1}(x_i,y_i)+b_{n-1}\\
+\phi_{n-1}(x_i,y_i)&=g(\theta_{n-2}^T\phi_{n-2}(x_i,y_i)+b_{n-2})\\
+\dots&\numberthis\\
+\phi_{1}(x_i,y_i)&=g(\theta_{0}^T\phi_{0}(x_i,y_i)+b_{0})
+\end{align*}
+where $\theta_{i}$ is the weight matrix from layer $i$ to layer $i+1$, $g(\cdot)$ is the activation function in a neural network and $\phi_{i}(\cdot)$ is the basis function in layer $i$. By convention let $Score(x,y)$ denote the log joint probability of $x$ and $y$. Let $score(x,y)$ denote the joint probability of $x_i$ and $y_i$
+\begin{align*}
+\label{eq:scorep}
+\because \log p(x,y)=\sum_i \log p(x_i,y_i) \\
+\therefore Score(x,y)= \sum_i score(x_i,y_i) \numberthis
+\end{align*}
+Replacing Equation \ref{eq:scorep} into the max-margin training objective in Equation \ref{eq:cost} results in a neural network that minimizes the upper bound of posterior expected loss on a training set assuming Gaussian prior. 
+The training objective of the neural network is to minimize
+\begin{equation}
+\label{eq:nncost}
+c(\theta)=\frac{1}{n}\sum_j{max_{\hat{y}^j\in Y^j}(\sum_i score(x_i^j,\hat{y_i}^j,\theta)+\Delta(y^j,\hat{y}^j))-\sum_i score(x_i^j,y_i^j,\theta)+\frac{\lambda}{2}||\theta||^2}
+\end{equation}
+
+There are two ways to get the score of an labeled arc $(x_i,y_i)$ through a neural network model. One way is to use a basis function $\phi_0(x_i,y_{i1},y_{i2})$ which encodes features about a labeled arc as an input and set one output neuron in the output layer. The score of the arc $(x_i,y_i)$ equals to the output value of the neuron in the output layer. Another way is to use a basis function $\phi_0(x_i,y_{i1})$ which encodes features about an unlabeled arc as an input and set the number of output neurons equal to the number of dependency types. The score of the arc $(x_i,y_i)$ equals to the output value of the $y_{i2}$\ts{th} neuron in the output layer. We choose the latter approach in this thesis. The latter approach is computationally efficient in prediction as it simultaneously calculates scores of an arc $\phi_0(x_i,y_{i1})$ with different labels. In Section \ref{sec:wordemb}, we will define the model input $\phi_0(x_i,y_{i1})$. In Section \ref{sec:acts}, we will introduce activation functions used in this thesis. In Section \ref{sec:Neural Network Model Architecture}, we will present our model architecture and validate that the model with $\phi_0(x_i,y_{i1})$ as an input is still a generative model.
+
+\subsection{Model Input}
+\label{sec:wordemb}
+\paragraph*{Word Embeddings} Word embeddings are used for representing words in our model. Representing words by their index in a vocabulary creates millions of dummy variables. A single index uniquely identifies a word but contains no further information about the word. It generalizes poorly and requires domain knowledge to add features of higher orders. Researchers in recent years have developed statistical models to learn word representations. Word representations, known as word embeddings, are vectors of real numbers mapped to words. Word embeddings can be regarded as basis functions. The notion of basis function occurs in many statistical models. Basis functions in a kernel method map an original data point to a set of similarity measures between that data point and some reference points. Basis functions in a decision tree model project an original data point to decision regions. Similarly the mapping from a word to a vector of real numbers can be considered as an adaptive basis function for this word where the vector values are parameter estimates in terms of a learning objective. Word embeddings can be trained by one model and reused as initializations in another model. There are two prevailing models to obtain pre-trained word embeddings, word2vec and GloVe. The word2vec model proposed by Mikolov et al. \cite{word2vec} learns word embeddings through the objective of maximizing the average conditional probability of the occurrence of words within a window of an observed word. The GloVe model proposed by Pennington et al. \cite{glove} captures ratios of words co-occurrence probability. An interesting finding about wordvec and GloVe is that they can perform semantic and syntactic word analogy task by vector additions. For example, Figure \ref{fig:glove} shows the projection of some GloVe word embeddings in 2 dimensions\footnote[2]{excerpted from http://nlp.stanford.edu/projects/glove/}. As it is seen in the graph, vec(``woman'')-vec(``man'')+vec(``king'') is closest to vec(``queen''). Therefore the word ``queen'' can be deduced by vector additions. In this thesis, we obtained pre-trained GloVe word embeddings of 50 dimensions online\footnote[3]{http://nlp.stanford.edu/projects/glove/}. It was trained with Wikepedia 2014 and Gigaword corpus.
+\begin{figure}
+  \centering
+    \includegraphics[width=0.9\textwidth]{glove}
+  \caption{Visualization of GloVe Word Embeddings in 2 Dimensions}
+  \label{fig:glove}
+\end{figure}
+
+%Though wordvec and GloVe models both offer open source code online, we will not train word embeddings by ourselves. It requires expertise knowledge and techniques to evaluate pre-trained word embeddings, which is beyond the scope of this thesis. The Glove pre-trained word embeddings of 50 dimensions is trained with Wikepedia-2014 and Gigaword. It can be found on $http://nlp.stanford.edu/projects/glove/$. Word2vec only provides pre-trained word embeddings of 300 dimensions. Since we expect to represent the data with smaller dimensions, the GloVe word embeddings is taken as the pre-trained word embeddings in this thesis.
+\paragraph*{Input} The input to our model on an instance level is the feature representation of an arc. The basis function $\phi_0(\cdot)$ transforms an arc to its feature representation. Let $k$ denote the index of word $y_{i1}$ in the sentence and $\phi^w(\cdot)$ denote the basis function of a word, which is a dictionary mapping a word to its word embeddings, and $\phi^p(\cdot)$ denote the postag embeddings of a word which is a dictionary mapping a word to its postag embeddings. The postag embeddings similarly as word embeddings represent a postag by a vector of real values. The basis function of an arc $(x_i,y_{i1})$ in this thesis is defined as 
+\begin{align*}
+\phi_0(x_i,y_{i1})=&concatenate(\phi^w(x_{k-2}),\phi^w(x_{k-1}),\phi^w(x_{k}),\phi^w(x_{k+1}),\phi^w(x_{k+2}),\phi^w(x_{i-2}),\numberthis\\
+                   &\phi^w(x_{i-1}),\phi^w(x_{i}),\phi^w(x_{i+1}),\phi^w(x_{i+2}),\phi^p(x_{k-2}),\phi^p(x_{k-1}),\phi^p(x_{k}),\phi^p(x_{k+1}),\\
+                   &\phi^p(x_{k+2}),\phi^p(x_{i-2}),\phi^p(x_{i-1}),\phi^p(x_{i}),\phi^p(x_{i+1}),\phi^p(x_{i+2}),distance(x_i,y_{i1}))\\
+\end{align*}
+where $distance(\cdot)$ measures the number of words in between $x_i$ and $y_{i1}$. The larger the distance, the more unlikely two words will form an arc. 
+For the purpose of a small scale, in our dependency parser the distance measure is defined as
+\begin{equation}
+distance(x_i,y_{i1})=
+    \begin{cases}
+      0.09, & \text{if}\ |i-k|>10 \\
+      0.06, & \text{if}\  5<|i-k|\leq 10\\
+      0.03, & \text{if}\  |i-k|=5\\
+      0, & \text{if}\  |i-k|=4\\
+      -0.03, & \text{if}\  |i-k|=3\\
+      -0.06, & \text{if}\  |i-k|=2\\
+      -0.09, & \text{if}\  |i-k|=1\\
+    \end{cases}
+\end{equation}
+
+The basis function $\phi_0(\cdot)$ incorporates a window of neighboring word embeddings and postag embeddings of a head and a dependent. The size of the context window is actually a hyper parameter. A small context window does not contain enough information. A large context window introduces a bit more noises. Technically, we can experiment with different window sizes but for time issue we choose the window size as 2 in this thesis. For example, in the sentence,``Many investors certainly believe a bidding war is imminent'', the context window for ``a'' is ``certainly'',``believe'',``bidding'' and ``war'' and the context window for the head of ``a'', which is ``war'', is ``a'',``bidding'',``is'',``imminent''. 
+\subsection{Activation Function}
+\label{sec:acts}
+Activation functions play a key role in a neural network model. They enable the neural network to learn non-linear relations. We list three activation functions used in the thesis:
+\begin{itemize}  
+\item tanh (tangent hyperbolic):\\
+$tanh(z)=\frac{e^{z}-e^{-z}}{e^z+e^{-z}}$
+\item tanhcubic (tangent hyperbolic cubic):\\
+$tanhcubic(z)=tanh(z^3+z)$
+\item cubic:\\
+$cubic(z)=z^3$
+\end{itemize}
+Sigmoid and tanh activation function are two common activation functions. The tanh activation function is preferred than the sigmoid activation function because the sigmoid activation function constrains outputs of neurons within positive values. It is the reason that we did not choose sigmoid activation function. The tanhcubic function
+is a novel activation function proposed by Pei et al. \cite{pei2015}. Their experimental results showed
+that the tanhcubic function is more effective than the tanh and the cubic function. However,
+according to Figure 3.4, as the effective region of the tanhcubic function is narrower than
+the tanh function, it is doubted that the tanhcubic function has any advantage over the tanh
+function. Compared to the tanh and the tanhcubic function, the cubic function is an unbounded function. The cubic function showed a better performance in Chen et al.'s work \cite{chen2014fast}. We
+will experiment with these three activation functions in Section \ref{sec:Parameter Tuning}.
+\begin{figure}
+  \centering
+    \includegraphics[width=0.7\textwidth]{act}
+  \caption{Plot of Activation Functions}
+  \label{fig:act}
+\end{figure}
+
+\subsection{Model Architecture}
+\label{sec:Neural Network Model Architecture}
+Our model architecture is a feedforward neural network with one hidden layer and multiple output units as shown in Figure \ref{fig:nnarch}. The input of the neural network is the basis function $\phi_0(x_i,y_{i1})$ defined in Section \ref{sec:wordemb}. It mainly includes the word embeddings and the postag embeddings of a head, a dependent and their surrounding words within a window of 2. The neural network has one hidden layer and multiple output units. The number of hidden neurons by default is 200. The number of output units equals to the number of dependency types. The score of $(x_i,y_i)$ is the $y_{i2}$\ts{th} output of the output layer. For example, in Figure \ref{fig:dptree}, the score of the arc pointing from ``war'' to ``a'' with dependency type NMOD, is the output value of the corresponding neuron labeled with NMOD as shown in Figure \ref{fig:nnarch}.
+
+It seems that this architecture models $p(y_{i2}|x_i,y_{i1})$ since the basis function in the input layer is a function of ($x_i$,$y_{i1}$) and the output is a distribution over $y_{i2}$. However one can regard the basis function in Equation \ref{eq:gnn} $\phi_1(x_i,y_i)$ as $\phi_1^*(x_i,y_{i1})\times\phi_r(y_{i2})$, where $\phi_1^*(x_i,y_{i1})=g(\phi_0(x_i,y_{i1})+b_0)$ and $\phi_r(y_{i2})$ is a row vector of which the  $y_{i2}$\ts{th} column is one and zero otherwise. To give a specific example, consider one instance with $y_{i2}=2$ and suppose we have three hidden units, three output units. The score function $score(x_i,y_i)$ equals to 
+\begin{align*}
+\label{eq:matdemo}
+&score(x_i,y_i)=\theta_1^T\times \phi_1(x_i,y_i)+b_1\\
+&\Leftrightarrow\\
+&\begin{bmatrix}
+\theta_1^{11} & \theta_1^{12}  & \theta_1^{13}  \\
+\theta_1^{21}  & \theta_1^{22}  & \theta_1^{23} \\
+\theta_1^{31}  & \theta_1^{32}  & \theta_1^{33}
+\end{bmatrix}
+\times( 
+\begin{bmatrix}
+\phi_1^1\\
+\phi_1^2\\
+\phi_1^3
+\end{bmatrix}
+\times
+\begin{bmatrix}
+0 & 1 & 0
+\end{bmatrix})+b_1=
+\begin{bmatrix}
+\theta_1^{11} & \theta_1^{12}  & \theta_1^{13}  \\
+\theta_1^{21}  & \theta_1^{22}  & \theta_1^{23} \\
+\theta_1^{31}  & \theta_1^{32}  & \theta_1^{33}
+\end{bmatrix}\times
+\begin{bmatrix}
+0 & \phi_1^1  & 0  \\
+0  & \phi_1^2  & 0 \\
+0  & \phi_1^3  & 0
+\end{bmatrix}+b_1\numberthis
+\end{align*}
+If we reshape the two matrices on the right side of Equation \ref{eq:matdemo} into vectors, we will get
+\begin{align*}
+\theta_1&=[\theta_1^{11};\theta_1^{12};\theta_1^{13};\theta_1^{21};\theta_1^{22};\theta_1^{23};\theta_1^{13};\theta_1^{23};\theta_1^{33}]\\
+\phi_1(x_i,y_i)&=[0;0;0;\phi_1^1;\phi_1^2;\phi_1^3;0;0;0]\numberthis\\
+score(x_i,y_i)&=\theta_1^T\phi_1(x_i,y_i)=\theta_1^{21}\phi_1^1+\theta_1^{22}\phi_1^2+\theta_1^{23}\phi_1^3+b_1
+\end{align*}
+
+This example illustrates that our model with $\phi_0(x_i,y_{i1})$ as an input in fact incorporates information about $y_{i2}$ into the model architecture. Therefore our model is still a generative model defined in the beginning of this Section.
+\paragraph*{Details of Implementation}
+In our implementation, we use the backprorogation algorithm for training the neural network.
+Since the backpropagation algorithm is a gradient descent method which minimizes a training objective. It can be adjusted to minimize the cost function, Equation \ref{eq:nncost}, by customizing the loss function $l(\cdot)$ in Algorithm \ref{Algo3}. Minimizing Equation \ref{eq:nncost} involves increasing scores of real arcs and decreasing scores of incorrectly predicted arcs. In the following, we will demonstrate how to increase the score of an arc $(x_i,y_i)$ through an example. In the step 8 of Algorithm \ref{Algo3}, the loss function $l(\cdot)$ takes two arguments the desired output $q_m$ and the actual output $a_{n-1}$. Suppose $a_{n-1}=[0.1,0.2,0.3]^{T}$ and $y_{i2}=2$. As $y_{i2}=2$, the second output value in the output layer is supposed to be increased. We artificially design $q_m=[0,-1,0]^{T}$. The loss function $l(\cdot)$ in Algorithm \ref{Algo3} is customized as 
+\begin{equation}
+\label{eq:closs}
+l(q_m,a_{n-1})=q_m^{T}a_{n-1}
+\end{equation}
+By Equation \ref{eq:closs}, in this example, $l(q_m,a_{n-1}) = -0.2$. As the back propagation is an gradient descent algorithm, decreasing -0.2 is equivalent to increasing 0.2. Alternatively, if we want to decrease the score of $(x_i,y_i)$, we can artificially set $q_m=[0,1,0]^{T}$.
+
+As Equation \ref{eq:closs} is differentiable, the back propagation algorithm works exactly the same for the generative neural network. Noticeably, we mentioned the input of our neural network model is a self adaptive basis function. It indicates the word embeddings and postag embeddings are not fixed. They are treated as parameters in the model and updated in each iteration by its derivatives which are blocks of the input layer error term $\delta_0$ in Algorithm \ref{Algo3}. 
+
+
+\begin{figure}
+  \centering
+    \includegraphics[width=1\textwidth]{nnarch}
+  \caption{The Neural Network Architecture}
+  \label{fig:nnarch}
+\end{figure}
+
+
+\section{Model Summary}
+\label{sec:Model setting}
+In the end of this Chapter, we make a short summary of our model. The model assumptions made in this thesis are:
+\begin{itemize}  
+\item The syntactic structure of sentences are projective dependency trees.
+\item The probability of the occurrence of an arc is independent of other arcs in a dependency tree. 
+\end{itemize}
+The training objective is 
+\begin{equation}
+\label{eq:cost1}
+c(\theta)=\frac{1}{n}\sum_j{max_{\hat{y}^j\in Y^j}(\sum_i score(x_i^j,\hat{y_i}^j,\theta)+\Delta(y^j,\hat{y}^j))-\sum_i score(x_i^j,y_i^j,\theta)+\frac{\lambda}{2}||\theta||^2}
+\end{equation}
+where $\Delta(y^j,\hat{y}^j)=\tau \sum_i (\hat{y}_{i1}^j\neq y_{i1}^j|| \hat{y}_{i2}^j\neq y_{i2}^j)$, i.e., the number of incorrectly predicted dependency types discounted by a factor.
+The score function is a neural network model with one hidden layer. The input of the neural network is $\phi_0(x_i,y_{i1})$. The number of neurons in the output layer equals to the number of dependency type. The score of an arc $(x_i,y_{i1})$ is the $y_{i2}$\ts{th} output of the neural network. The Eisner algorithm is used for prediction and the Loss Augmented Eisner Algorithm is used for decoding $\hat{y}^j$ in Equation \ref{eq:cost1}. Parameters in the model include weight matrices of the neural network, word embeddings, and postag embeddings. We trained the neural network by AdaGrad with mini-matches. Dropout is only applied to the hidden layer and L2 regularization is applied to parameters in the neural network, word embeddings, and postag embeddings. 
+
+To give readers a better understanding of how our dependency parser is trained, Figure \ref{fig:workflow} presents a draft of the work flow of a training process. For simplicity let us assume the batch size is one. During training, after one epoch is completed, the data will be shuffled randomly.
+\begin{figure}
+  \centering
+    \includegraphics[width=0.7\textwidth]{workflow}
+  \caption{The Work Flow of the Training Process}
+  \label{fig:workflow}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% lorem.tex ends here
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "demothesis"
+%%% End: 

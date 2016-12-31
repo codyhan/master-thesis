@@ -1,0 +1,102 @@
+%%% Intro.tex --- 
+%% 
+%% Filename: Intro.tex
+%% Description: 
+%% Author: Ola Leifler
+%% Maintainer: 
+%% Created: Thu Oct 14 12:54:47 2010 (CEST)
+%% Version: $Id$
+%% Version: 
+%% Last-Updated: Thu Oct 14 13:40:27 2010 (CEST)
+%%           By: Ola Leifler
+%%     Update #: 4
+%% URL: 
+%% Keywords: 
+%% Compatibility: 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Commentary: 
+%% 
+%% 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Change log:
+%% 
+%% 
+%% RCS $Log$
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Code:
+
+
+\chapter{Introduction}
+\label{cha:introduction}
+Structured prediction, less known than regression and classification, is a branch of supervised learning that builds a mapping from an input space to an output space. Rather than predicting a real value, either continuous or discrete, structured prediction predicts structured data types such as sequences and graphs. In natural language processing, structured prediction is of particular importance. Many tasks involves structured prediction, such as speech recognition, part-of-speech tagging and dependency parsing. Traditionally, a structured prediction model trains a function which scores how likely a possible structure $y$ is for $x$. In prediction, the problem becomes a combinatorial optimization task. We search for a structure with the highest score among all the other candidates in the finite output space, 
+\begin{equation}
+\label{eq:ctr}
+\hat{y}=\underset{y\in Y(x)}{\operatorname{argmax}}\,Score(x,y;\theta)
+\end{equation}   
+where $Y(x)$ is the output space for the input $x$ and $\theta$ represents model parameters. In this thesis, we explore the use of structured prediction in the context of dependency parsing. In dependency parsing, a structured prediction model maps a sentence $x$ to a representation of its syntactic structure in the form of a dependency graph which is a directed graph, as shown in Figure \ref{fig:dptree}. The arcs of such a graph represent syntactic relations between individual words. In an arc, $h\xrightarrow[]{r} d$, the word h which the arc points from is called the head, the word d which the arc points to is called the dependent and the label $r$ which defines the relation between the head word and the dependent word is called dependency type. For example, in Figure \ref{fig:dptree}, the head of ``Many'' is ``investors''. The output space for a sentence consists of all possible directed graphs satisfying certain constraints (these constraints will be explained in Section \ref{sec:Dependency Tree}). Under these constraints, a combinatorial optimization algorithm called the Eisner algorithm guarantees to find a highest-scoring graph in polynomial time with respect to the length of $x$.
+
+Approaches taking dependency parsing as a structured prediction problem are called graph-based approaches. Conventional graph-based approaches in dependency parsing commonly adopt a linear model as the score function \cite{mcdonald2005online} \cite{mcdonald2005non} \cite{mcdonald2006online} \cite{koo2010efficient}. Features are extracted through representing words by boolean variables. For example one such variable would be true when the dependent of an arc is the word ``many'' and false in all other cases; and another variable would be true if the head is the word ``investors''.  Millions of handcrafted features are created as the number of features is proportional to the size of a vocabulary. Apart from the sheer size, there are two other problems with this approach. First, the design of these handcrafted features heavily rely on expert linguistic knowledge. Second, a linear model lacks of generality when a decision boundary is not linear separable. Very recently, Pei et al. \cite{pei2015} were the first to propose a neural network model as the score function for graph-based dependency parsing. The use of neural networks greatly releases the labor of feature engineering as neural networks are able to learn feature combinations. It to a large extent alleviates researchers' burden in exploiting good features and enables researchers focus more on model architecture design. With the assist of neural networks, it is promising to solve dependency parsing problems with a more complex search space.
+ However, Pei et al.'s model is over complicated in a way that they trained two neural networks with a same architecture to score arcs of different directions. Arc directions can be seen in Figure \ref{fig:dptree}. For example. ``many$\leftarrow$investor'' is a left arc and ``believe$\rightarrow$is'' is a right arc. In Pei et al.'s model, a left arc would be scored differently than an right arc even though words of two arcs are identical. Following Pei et al., Kiperwasser et al. \cite{kiperwasser2016simple} introduced a simpler neural network architecture which only takes features related with a head word and a dependent word as inputs without considering arc directions. Kiperwasser et al.'s model achieves a good performance, showing the possibility that arc directions are not important features. However the inputs in Kiperwasser et al.'s neural network model are outputs of an extra Long short-term memory model which is inherently complicated. A research question comes naturally to ask how the model performance will be affected if we use features chosen by Pei et al. but only use one neural network instead of two. This simplification is worth to investigate since it will reduce about 200,000 parameters in the model.
+
+Both Pei et al.\ \cite{pei2015} and Kiperwasser et al.\ \cite{kiperwasser2016simple} presented their models from a non-probabilistic view. The training objective of their models is the max margin principle. The idea is that the score of a correct tree should be at least larger than the score of an wrongly predicted tree plus a margin loss (see Equation\ref{eq:margin}). The margin loss is only incurred if both the head of a word and their dependency type are incorrectly predicted. However, under the framework of statistical learning, the margin loss is interpreted as the empirical loss. This allows us to vary the margin loss according to actual situations. In dependency parsing, we would expect that the empirical loss should be lower if the head of a word is correctly predicted with an incorrect dependency type than the loss incurred if both the head and the dependency type are predicted wrong. A second research question is how variations of margin loss will affect the model performance.
+
+In this thesis, we explore the possibility of simplifying the neural network model proposed by Pei et al. \cite{pei2015} and use the Eisner Algorithm as the combinatorial optimization method. 
+Main contributions of this thesis are 
+\begin{itemize}  
+\item We reduce the model complexity of Pei et al.'s work \cite{pei2015} with an acceptable model accuracy. 
+\item We present the feedforward neural network model as a generative model in the context of statistical learning (in Section \ref{sec:Generative Neural Network}).
+\item We propose the Loss-Augmented Eisner Algorithm (in Section \ref{sec:Loss-Augmented Eisner Algorithm}).
+\item We implement a graph-based dependency parsing system.
+\end{itemize}
+
+This thesis is organized as follows. In Chapter \ref{cha:Basic Concepts}, a framework for a dependency parsing system is presented. Main components of a dependency parser are introduced. In Chapter \ref{cha:method}, we introduce methods of training a score function and present the work flow of our own parser. In Chapter \ref{cha:results}, we describe training data, report experimental results, and make a comparison with Pei et al.'s model. In Chapter \ref{cha:discussion} potential problems and future work are discussed.  In Chapter \ref{cha:conclusion} conclusions in this thesis are summarized.
+
+\begin{figure}
+  \centering
+    \includegraphics[width=0.9\textwidth]{dptree}
+  \caption{An example of a dependency graph}
+  \label{fig:dptree}
+\end{figure}
+
+\section{Background}
+\label{sec:Background}
+Analyzing a sentence's syntactic structure is a first step towards understanding the meaning of a sentence. In this thesis, syntactic structure is understood as the set of all words connections in a sentence. Words are the  smallest elements in linguistics which express meaning. A sentence, a sequence of words, can represent more complex meanings as words ceases to be isolated and creates connections with neighboring words. Words can be considered as functional objects which internally define certain rules and distributions of connecting with other words. The deterministic rules are a subset of grammar knowledge. For example, ``the'' can only modify a noun. The probabilistic distributions are reflections of words' semantic information. For example, ``bread'' can hardly be the subject of ``eat'' unless it is assumed to be a kind of living thing although the connection is grammatically correct. 
+
+In dependency parsing, the syntactic structure of a sentence is represented as a dependency tree, a directed graph over the words in a sentence. A directed arc points from the head word to the dependent word. The label of the arc defines the dependency type between the head and the dependent. For example, in Figure \ref{fig:dptree}, ``many'' functions as the noun modifier (label NMOD) of ``investors'',``certainly'' functions as the adverb modifier (label ADV) of ``believe'' and ``investors'' functions as the subject (label SBJ) of ``believe''. 
+
+
+
+
+\paragraph*{Dependency Parsing}
+Dependency parsing is a fundamental task in NLP which automatically predicts a sentence's syntactic structure. It is widely integrated into other NLP systems such as sentence compression, information retrieval, and machine translation. Sentence compression is a crucial procedure for automatically summarizing articles. The core constitutes of a sentence consists of subject, object, and predicate arguments. Sentence compression retains the core constitutes of a sentence and removes words that modify core constitutes. For example, the sentence ``I drink green tea in the sunshine'' is abbreviated as ``I drink tea''. Applying dependency parsing is a direct way to find core constitutes in a sentence. In information retrieval, dependency parsing opens the possibility to query information connected with a certain word. For example, one can possibly query the object of ``buy'' in companies' annual reports in order to know what properties have been acquired during the year. This might help investors quickly locate valuable information in thousands of annual reports. In machine translation, syntactic structures in source language and in target language sometimes are different. With the assist of dependency parsing, a system could naively translate a sentence word by word and transform the syntactic structure of the source language to the target language. For example, in English the sentence ``I go first'' will be literally translated into Mandarin as ``I first go''. 
+
+There are two main approaches in dependency parsing. One is called the transition-based approach. Another is called the graph-based approach. The transition-based approach builds a transition system which makes a prediction locally. It starts from an initial state, predicts the next transition given the input and the parsing history until the terminal state is reached. Pioneer researches in transition-based approaches are Nivre \cite{nivre2004incrementality} and Nivre \cite{nivre2008algorithms}. The graph-based approach generalizes dependency parsing as a structured prediction problem. It learns a score function which measures the goodness of a candidate tree and parses a sentence by a graph search algorithm given the score function. Depending on different assumptions about a search space, a dependency tree can be projective or non-projective, which will be explained in Section \ref{sec:Dependency Tree}.
+Graph search algorithms mainly include the CKY algorithm \cite{younger1967recognition}, the Eisner algorithm \cite{eisner1996three} for projective trees and Chu-Liu-Edmond algorithm \cite{chu1965} for non-projective trees. Learning methods falls into three categories, perceptron based, max-margin based and probabilistic based methods. 
+
+The averaged perceptron algorithm proposed by Collin and Roark \cite{collins2004incremental} memorizes the features of a gold-structured tree and penalizes the features occurring in a wrongly predicted tree. Taskar et al. \cite{taskar2004max} introduced max margin principle, inspired by support vector machine, to the parsing problem. It states that the score of a correct tree should be larger than the score of an incorrect tree up to a margin. McDonald et al. \cite{mcdonald2005online} combined a max-margin based algorithm (MIRA) with Eisner algorithm to parse projective trees. McDonald et al. \cite{mcdonald2005non} generalized the parsing problem as searching for the maximum spanning tree. They replaced the Eisner algorithm in the paper \cite{mcdonald2005online} with the Chu-Liu-Edmond algorithm to parse non-projective trees. McDonald et al.'s work \cite{mcdonald2005non} assumed the score of a tree is factored into scores of individual arcs. However the score of a tree can also be factored into scores of higher order subgraphs. Mcdonald and Pereira \cite{mcdonald2006online}, Koo and Collins \cite{koo2010efficient} tackled the issue of second order factorization and third order factorization respectively. Probabilistic methods in dependency parsing treat the score function as a joint or conditional probability. Most probabilistic methods assumed the log-linear generative model. The generative approach models the joint probability of a tree and a sentence, and then derive the conditional probability of the tree given the sentence. McDonald and Satta \cite{mcdonald2007complexity}, Koo et al. \cite{koo2007structured}, Smith and Smith \cite{smith2007probabilistic} applied the matrix tree theorem by Tutte \cite{tutte} to derive the summation over probabilities of all possible trees assuming non-projectivity. For projective trees, Paskin \cite{paskin2002grammatical} explored the inside-outside algorithm by Lari and Young \cite{lari1990estimation}.
+
+\paragraph*{Neural Networks}
+Neural networks has experienced ups and downs in the history. In 1943, the paper by Culloch and Pitts's \cite{mcculloch1943logical} represents the start of research about neural network models. In 1974, Werbos \cite{werbos1974} invented the backpropagation algorithm to train neural network in his doctoral dissertation. Rumelhart and et al. \cite{rumelhart1986} rediscovered back-propagation algorithm and made it well known to the academia. Feedforward neural networks with additional hidden layers empirically do not gain extra benefits. This was confirmed by Hornik and et al. \cite{hornik1989}. They proved that multilayer feedforward neural networks with a single hidden layer of enough hidden units are universal approximators of any square integral functions. In the 90s, neural networks in machine learning received less interest due to the limitation of computer speed and dataset volume. Entered into the new millennium, powered by the development of computer technology such as multiprocessor graphics cards, neural networks in a real sense started to shine. Several methods such as AdaGrad \cite{adagrad}, dropout \cite{dropout}, and batch normalization \cite{ioffe2015batch} proposed in the last five years also greatly reduced the generalization error of neural networks. 
+
+ In natural language processing, neural networks are capable of learning word representations. Bengio et al. \cite{bengio2003neural} introduced a neural probabilistic model to learn representations of words in a low dimensional vector space. Words in a similar context would result in a closer vector representations. The low-dimension word representation known as word embeddings preserved abstract syntactic and semantic information learned through a large text corpora. Prominent works are followed by Mikolov et al. \cite{word2vec} and Pennington et al. \cite{glove}. They introduced word2vec word embeddings and GloVe word embeddings respectively. Collobert et al. \cite{collobert2011natural} presented a unified neural network framework for solving natural language processing tasks with the aid of word embeddings. It popularizes the use of neural networks in NLP research. Fostered by the power of neural networks, the ability to generalize non-linearity and the ability to learn low-dimension word representations, researchers very recently applied neural networks to dependency parsing, Chen et al. \cite{chen2014fast} in a transition-based approach, Pei et al. \cite{pei2015} in a graph-based approach and Kiperwasser et al. \cite{kiperwasser2016simple} in both approaches. 
+
+
+\section{Notation}
+\label{sec:Notations}
+This section defines the basic notation used throughout this thesis. The input of dependency parsing is a sentence $x$. Let $x_i$ denote the $i$\ts{th} word in the sentence. The desired output $y$ is a sequence of tuples $(y_{i1},y_{i2})$ where $y_{i1}$ is the head word of  $x_i$  and $y_{i2}$ is the index of dependency type between the arc $y_{i1}\rightarrow x_i$. The index of the dependency type is given by alphabetical order. For example, in Figure \ref{fig:dptree}, ``certainly'' is the 4\ts{th} word in the sentence. Its head is ``believe''. The index of their dependency type ``ADV'' is 1. Accordingly, $x_4=$``certainly'',$y_{41}=$``believe'', and $y_{42}=1$.
+%\nocite{scigen}
+%We have included Paper \ref{art:scigen}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Intro.tex ends here
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "demothesis"
+%%% End: 
